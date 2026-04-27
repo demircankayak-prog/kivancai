@@ -516,7 +516,7 @@ function Index() {
               <X size={18} />
             </button>
             <div className="flex items-center gap-3">
-              <Sparkles className="h-7 w-7 text-brand" />
+              <img src={logoImg} alt="" className="h-9 w-9 rounded-lg object-contain" />
               <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
