@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -90,7 +91,11 @@ function AuthPage() {
     <main className="grid min-h-screen place-items-center bg-[image:var(--gradient-stage)] px-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card/95 p-8 shadow-[var(--shadow-composer)] backdrop-blur-md">
         <div className="mb-6 flex items-center gap-3">
-          <Sparkles className="h-7 w-7 text-brand" />
+          <img
+            src={logoImg}
+            alt="Kıvanç AI"
+            className="h-9 w-9 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+          />
           <h1 className="font-serif text-2xl font-bold">Kıvanç AI</h1>
         </div>
         <h2 className="text-xl font-semibold">{mode === "signup" ? "Hesap oluştur" : "Giriş yap"}</h2>
