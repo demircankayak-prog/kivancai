@@ -249,7 +249,7 @@ function Index() {
           <aside className="hidden w-52 shrink-0 border-r border-sidebar-border bg-sidebar/95 px-4 py-5 md:flex md:flex-col lg:w-60">
             <div className="flex items-center gap-3">
               <h2 className="font-serif text-2xl font-bold leading-none text-foreground">Kıvanç AI</h2>
-              <Sparkles className="h-7 w-7 text-brand" aria-hidden="true" />
+              <img src={logoImg} alt="Kıvanç AI" className="h-9 w-9 rounded-lg object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
             </div>
 
             <button
@@ -310,6 +310,7 @@ function Index() {
               <button onClick={() => setSidebarOpen((o) => !o)}>
                 <Menu size={20} />
               </button>
+              <img src={logoImg} alt="" className="h-7 w-7 rounded-md object-contain" />
               <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
             <div className="hidden md:block text-xs text-muted-foreground">
