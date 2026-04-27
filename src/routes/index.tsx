@@ -1,146 +1,530 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import {
-  FileText,
-  Lightbulb,
-  Menu,
-  Mic,
-  Palette,
-  Paperclip,
-  PenSquare,
-  Plus,
-  Search,
-  Send,
-  Sparkles,
-  User,
+  FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
+  Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
+type Msg = { role: "user" | "assistant"; content: string };
+
+interface ModelOption {
+  id: string;
+  label: string;
+  provider: string;
+  description: string;
+  available: boolean;
+}
+
+const MODELS: ModelOption[] = [
+  // Lovable AI Gateway — gerçek çalışır
+  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", description: "Hızlı, dengeli — günlük sorular için ideal", available: true },
+  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", description: "En güçlü Gemini — derin akıl yürütme", available: true },
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "Google", description: "Görsel + uzun bağlam + karmaşık analiz", available: true },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", description: "Dengeli — hız ve kalite", available: true },
+  { id: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", provider: "Google", description: "En hızlı, en ucuz — basit görevler", available: true },
+  { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", description: "OpenAI'nin en yeni modeli — karmaşık problem çözme", available: true },
+  { id: "openai/gpt-5", label: "GPT-5", provider: "OpenAI", description: "Güçlü çok yönlü — mükemmel akıl yürütme", available: true },
+  { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", description: "Orta düzey — düşük maliyet, iyi performans", available: true },
+  { id: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", description: "Hız ve verimlilik için tasarlandı", available: true },
+  // Yakında — placeholder
+  { id: "x-ai/grok", label: "Grok 3", provider: "xAI", description: "Elon Musk'ın AI'si — gerçek zamanlı bilgi (yakında)", available: false },
+  { id: "anthropic/claude-3.5", label: "Claude 3.5 Sonnet", provider: "Anthropic", description: "Uzun yazı ve nüanslı yanıtlar (yakında)", available: false },
+  { id: "perplexity/sonar", label: "Perplexity Sonar", provider: "Perplexity", description: "Web araması ile canlı yanıtlar (yakında)", available: false },
+  { id: "duckduckgo/duck-ai", label: "DuckDuckGo AI", provider: "DuckDuckGo", description: "Gizlilik odaklı arama destekli AI (yakında)", available: false },
+  { id: "meta/llama-3", label: "Llama 3", provider: "Meta", description: "Açık kaynak büyük model (yakında)", available: false },
+  { id: "mistral/large", label: "Mistral Large", provider: "Mistral", description: "Avrupa'nın güçlü modeli (yakında)", available: false },
+];
+
 const promptActions = [
-  { label: "Proje Başlat", icon: FileText },
-  { label: "Tasarım Yap", icon: Palette },
-  { label: "Araştırma Yap", icon: Search },
-  { label: "Fikir Geliştir", icon: Lightbulb },
+  { label: "Proje Başlat", icon: FileText, prompt: "Bana yeni bir proje fikri için detaylı bir başlangıç planı yap." },
+  { label: "Tasarım Yap", icon: Palette, prompt: "Modern ve şık bir tasarım önerisi yapar mısın?" },
+  { label: "Araştırma Yap", icon: Search, prompt: "Şu konu hakkında derin araştırma yap: " },
+  { label: "Fikir Geliştir", icon: Lightbulb, prompt: "Şu fikri geliştir ve daha iyi hale getir: " },
 ];
 
 function Index() {
+  const navigate = useNavigate();
+  const { user, profile, signOut, loading } = useAuth();
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [streaming, setStreaming] = useState(false);
+  const [model, setModel] = useState(MODELS[0].id);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [savedChats, setSavedChats] = useState<Array<{ id: string; title: string; messages: Msg[] }>>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const [recording, setRecording] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("kivanc-saved-chats");
+    if (stored) try { setSavedChats(JSON.parse(stored)); } catch {}
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  const requireAuth = () => {
+    if (!user) {
+      navigate({ to: "/auth" });
+      return false;
+    }
+    return true;
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || streaming) return;
+    if (!requireAuth()) return;
+
+    const newMessages: Msg[] = [...messages, { role: "user", content: text }];
+    setMessages(newMessages);
+    setInput("");
+    setStreaming(true);
+
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages, model }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Bir sorun oluştu" }));
+        setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${err.error || "Hata"}` }]);
+        setStreaming(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantText = "";
+      setMessages((p) => [...p, { role: "assistant", content: "" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(json);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantText += delta;
+              setMessages((p) => p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)));
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      setMessages((p) => [...p, { role: "assistant", content: "⚠️ Bağlantı hatası" }]);
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const newChat = () => {
+    setMessages([]);
+    setInput("");
+  };
+
+  const saveCurrentChat = () => {
+    if (!requireAuth()) return;
+    if (messages.length === 0) return;
+    const title = messages[0].content.slice(0, 40);
+    const next = [{ id: crypto.randomUUID(), title, messages }, ...savedChats].slice(0, 30);
+    setSavedChats(next);
+    localStorage.setItem("kivanc-saved-chats", JSON.stringify(next));
+  };
+
+  const loadChat = (id: string) => {
+    const c = savedChats.find((x) => x.id === id);
+    if (c) setMessages(c.messages);
+  };
+
+  const toggleMic = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      alert("Tarayıcınız ses tanımayı desteklemiyor.");
+      return;
+    }
+    if (recording) {
+      recognitionRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "tr-TR";
+    rec.interimResults = false;
+    rec.onresult = (e: any) => {
+      const t = e.results[0][0].transcript;
+      setInput((prev) => (prev ? prev + " " + t : t));
+    };
+    rec.onend = () => setRecording(false);
+    rec.onerror = () => setRecording(false);
+    recognitionRef.current = rec;
+    rec.start();
+    setRecording(true);
+  };
+
+  const initials = (profile?.display_name || user?.email || "U").slice(0, 1).toUpperCase();
+  const displayName = profile?.display_name || user?.email?.split("@")[0] || "Misafir";
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="flex min-h-screen">
+        {/* Mini sidebar */}
         <aside className="hidden w-12 shrink-0 flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-5 md:flex">
-          <div className="flex flex-col items-center gap-7">
-            <button aria-label="Menüyü aç" className="text-muted-foreground transition hover:text-foreground">
+          <div className="flex flex-col items-center gap-5">
+            <button
+              aria-label="Menüyü aç/kapa"
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="text-muted-foreground transition hover:text-foreground"
+            >
               <Menu size={18} />
             </button>
             <button
-              aria-label="Yeni sohbet oluştur"
+              aria-label="Yeni sohbet"
+              onClick={newChat}
+              title="Yeni sohbet"
               className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
             >
               <PenSquare size={17} />
             </button>
+            <button
+              aria-label="Kaydet"
+              onClick={saveCurrentChat}
+              title="Sohbeti kaydet"
+              className="text-muted-foreground transition hover:text-foreground"
+            >
+              <Save size={18} />
+            </button>
+            <button
+              aria-label="Hakkında"
+              onClick={() => setAboutOpen(true)}
+              title="Hakkında"
+              className="text-muted-foreground transition hover:text-foreground"
+            >
+              <Info size={18} />
+            </button>
           </div>
-          <button aria-label="Ayarlar" className="text-muted-foreground transition hover:text-foreground">
-            <Sparkles size={18} />
-          </button>
+          {user && (
+            <button
+              onClick={signOut}
+              aria-label="Çıkış"
+              title="Çıkış yap"
+              className="text-muted-foreground transition hover:text-foreground"
+            >
+              <LogOut size={18} />
+            </button>
+          )}
         </aside>
 
-        <aside className="hidden w-52 shrink-0 border-r border-sidebar-border bg-sidebar/95 px-4 py-5 md:block lg:w-60">
-          <div className="flex items-center gap-3">
-            <h2 className="font-serif text-2xl font-bold leading-none text-foreground">Kıvanç Yapay Zeka</h2>
-            <Sparkles className="h-7 w-7 text-brand" aria-hidden="true" />
-          </div>
-          <button className="mt-8 h-10 w-full rounded-lg bg-secondary px-4 text-sm font-semibold text-secondary-foreground shadow-[var(--shadow-control)] transition hover:bg-accent">
-            E-posta Gir
-          </button>
-        </aside>
+        {/* Geniş sidebar */}
+        {sidebarOpen && (
+          <aside className="hidden w-52 shrink-0 border-r border-sidebar-border bg-sidebar/95 px-4 py-5 md:flex md:flex-col lg:w-60">
+            <div className="flex items-center gap-3">
+              <h2 className="font-serif text-2xl font-bold leading-none text-foreground">Kıvanç AI</h2>
+              <Sparkles className="h-7 w-7 text-brand" aria-hidden="true" />
+            </div>
 
+            <button
+              onClick={newChat}
+              className="mt-6 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 text-sm font-semibold text-secondary-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
+            >
+              <PenSquare size={15} /> Yeni Sohbet
+            </button>
+
+            {!user ? (
+              <button
+                onClick={() => navigate({ to: "/auth" })}
+                className="mt-3 h-10 w-full rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                E-posta ile Giriş
+              </button>
+            ) : (
+              <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
+                <p className="font-semibold text-foreground">{displayName}</p>
+                <p className="truncate text-muted-foreground">{user.email}</p>
+              </div>
+            )}
+
+            <div className="mt-5 flex-1 overflow-y-auto">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kayıtlı Sohbetler</p>
+              {savedChats.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Henüz kayıtlı sohbet yok.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {savedChats.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        onClick={() => loadChat(c.id)}
+                        className="flex w-full items-center gap-2 truncate rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                      >
+                        <Bookmark size={12} className="shrink-0" />
+                        <span className="truncate">{c.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <button
+              onClick={() => setAboutOpen(true)}
+              className="mt-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+            >
+              <Info size={13} /> Hakkında
+            </button>
+          </aside>
+        )}
+
+        {/* Main area */}
         <section className="relative flex min-w-0 flex-1 flex-col bg-[image:var(--gradient-stage)]">
           <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4 sm:px-7">
             <div className="flex items-center gap-3 md:hidden">
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-secondary-foreground">
-                <Sparkles size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-bold leading-tight">Kıvanç AI</p>
-                <p className="text-xs text-muted-foreground">ChatGPT 5.2</p>
-              </div>
+              <button onClick={() => setSidebarOpen((o) => !o)}>
+                <Menu size={20} />
+              </button>
+              <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
-            <div className="hidden md:block" />
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="hidden sm:inline">Kıvaniy plus planına yükseltin</span>
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-[var(--shadow-avatar)]">
-                <User size={15} />
-              </div>
+            <div className="hidden md:block text-xs text-muted-foreground">
+              {MODELS.find((m) => m.id === model)?.label}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-sm font-medium text-foreground sm:inline">{displayName}</span>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={displayName} className="h-9 w-9 rounded-full border-2 border-brand object-cover shadow-[var(--shadow-avatar)]" />
+                  ) : (
+                    <div className="grid h-9 w-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-[var(--shadow-avatar)]">
+                      {initials}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate({ to: "/auth" })}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition hover:bg-accent"
+                  aria-label="Giriş yap"
+                  title="Giriş yap"
+                >
+                  <User size={16} />
+                </button>
+              )}
             </div>
           </header>
 
-          <div className="relative flex flex-1 items-center justify-center px-4 pb-20 pt-10 sm:px-8 md:pb-28">
-            <Sparkles className="pointer-events-none absolute bottom-10 right-8 h-14 w-14 text-muted-foreground/45 md:h-20 md:w-20" aria-hidden="true" />
-
-            <div className="w-full max-w-2xl -translate-y-4 text-left sm:-translate-y-8">
-              <h1 className="text-balance text-5xl font-extrabold leading-none tracking-normal text-brand sm:text-6xl lg:text-7xl">
-                Merhaba Kıvanç
-              </h1>
-              <p className="mt-4 text-pretty text-2xl font-medium leading-tight text-foreground sm:text-3xl">
-                Sizin için özel bir plan. Lütfen e-postanızı girin.
-              </p>
-
-              <form className="mt-6 rounded-2xl border border-input bg-card/90 p-4 shadow-[var(--shadow-composer)] backdrop-blur-sm">
-                <label htmlFor="email" className="sr-only">
-                  E-posta adresiniz
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="E-posta adresinizi girin..."
-                  className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-4 text-muted-foreground">
-                    <button type="button" aria-label="Ekle" className="transition hover:text-foreground">
-                      <Plus size={20} />
-                    </button>
-                    <button type="button" className="inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground">
-                      <span className="text-lg font-semibold">A</span>
-                      <span>Tools</span>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4 text-muted-foreground">
-                    <button type="button" className="inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground">
-                      <Paperclip size={16} />
-                      <span>Kaydet</span>
-                    </button>
-                    <button type="button" aria-label="Mikrofon" className="transition hover:text-foreground">
-                      <Mic size={18} />
-                    </button>
-                    <button type="submit" aria-label="Gönder" className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 sm:hidden">
-                      <Send size={16} />
-                    </button>
-                  </div>
+          {/* Messages area */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+            {messages.length === 0 ? (
+              <div className="grid h-full place-items-center">
+                <div className="w-full max-w-2xl text-left">
+                  <h1 className="text-balance text-5xl font-extrabold leading-none tracking-normal text-brand sm:text-6xl lg:text-7xl">
+                    Merhaba {user ? displayName : "Kıvanç"}
+                  </h1>
+                  <p className="mt-4 text-pretty text-2xl font-medium leading-tight text-foreground sm:text-3xl">
+                    {user ? "Sınır tanımayan AI ile ne yapmak istersin?" : "Başlamak için bir e-posta ile kayıt ol."}
+                  </p>
                 </div>
-              </form>
+              </div>
+            ) : (
+              <div className="mx-auto max-w-3xl space-y-6">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {m.role === "assistant" && (
+                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
+                        <Sparkles size={16} />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      m.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-foreground border border-border"
+                    }`}>
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
+                        <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-              <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start sm:pl-7">
-                {promptActions.map((action) => {
-                  const Icon = action.icon;
+          {/* Composer */}
+          <div className="px-4 pb-6 pt-2 sm:px-8">
+            <form onSubmit={handleSubmit} className="mx-auto max-w-3xl rounded-2xl border border-input bg-card/95 p-4 shadow-[var(--shadow-composer)] backdrop-blur-sm">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={user ? "Bir şey sor…" : "Mesaj göndermek için giriş yap…"}
+                className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+              />
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div className="relative flex items-center gap-3 text-muted-foreground">
+                  {/* Plus / Model picker */}
+                  <button
+                    type="button"
+                    onClick={() => setModelMenuOpen((o) => !o)}
+                    aria-label="Model seç"
+                    title="AI modeli seç"
+                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                  >
+                    <Plus size={20} />
+                  </button>
+
+                  {modelMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setModelMenuOpen(false)} />
+                      <div className="absolute bottom-12 left-0 z-20 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
+                        <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          AI Modelleri ({MODELS.length})
+                        </p>
+                        {MODELS.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            disabled={!m.available}
+                            onClick={() => {
+                              if (m.available) {
+                                setModel(m.id);
+                                setModelMenuOpen(false);
+                              }
+                            }}
+                            className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
+                              model === m.id ? "bg-brand/15 text-brand" : "text-foreground hover:bg-accent"
+                            } ${!m.available ? "cursor-not-allowed opacity-50" : ""}`}
+                            title={m.description}
+                          >
+                            <div className="flex w-full items-center justify-between">
+                              <span className="font-medium">{m.label}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{m.provider}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{m.description}</span>
+                            {!m.available && (
+                              <span className="mt-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">YAKINDA</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => sendMessage("Bana yardımcı olabileceğin tüm konuları kısaca anlat.")}
+                    className="inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground"
+                  >
+                    <span className="text-lg font-semibold">A</span>
+                    <span>Tools</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={saveCurrentChat}
+                    title="Bu sohbeti kaydet"
+                    className="inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground"
+                  >
+                    <Save size={16} />
+                    <span className="hidden sm:inline">Kaydet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleMic}
+                    aria-label="Mikrofon"
+                    title="Sesli giriş"
+                    className={`transition ${recording ? "text-destructive animate-pulse" : "hover:text-foreground"}`}
+                  >
+                    <Mic size={18} />
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={streaming || !input.trim()}
+                    aria-label="Gönder"
+                    className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {messages.length === 0 && (
+              <div className="mx-auto mt-4 flex max-w-3xl flex-wrap justify-center gap-2 sm:justify-start">
+                {promptActions.map((a) => {
+                  const Icon = a.icon;
                   return (
                     <button
-                      key={action.label}
+                      key={a.label}
                       type="button"
-                      className="inline-flex h-11 items-center gap-2 rounded-full bg-secondary px-4 text-sm font-medium text-secondary-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
+                      onClick={() => {
+                        if (a.prompt.endsWith(": ") || a.prompt.endsWith(" ")) {
+                          setInput(a.prompt);
+                        } else {
+                          sendMessage(a.prompt);
+                        }
+                      }}
+                      className="inline-flex h-10 items-center gap-2 rounded-full bg-secondary px-4 text-sm font-medium text-secondary-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
                     >
-                      <Icon size={17} className="text-brand" />
-                      {action.label}
+                      <Icon size={15} className="text-brand" />
+                      {a.label}
                     </button>
                   );
                 })}
               </div>
-            </div>
+            )}
           </div>
         </section>
       </div>
+
+      {/* About modal */}
+      {aboutOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4" onClick={() => setAboutOpen(false)}>
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setAboutOpen(false)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+              <X size={18} />
+            </button>
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-7 w-7 text-brand" />
+              <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Sınırsız kodlama ve yaratıcılık asistanı. Birden fazla AI modeli destekler — Gemini ve GPT-5 ailelerinin tüm sürümleri ile çalışır.
+              Grok, Claude, Perplexity, DuckDuckGo, Llama ve Mistral yakında geliyor.
+            </p>
+            <p className="mt-3 text-xs text-muted-foreground">v1.0 — © Kıvanç</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
