@@ -177,6 +177,9 @@ function Index() {
       "görsel oluştur", "görsel yap", "resim oluştur", "resim yap",
       "fotoğraf oluştur", "fotoğraf yap", "çiz", "görselleştir",
       "bir görsel", "bir resim", "image of", "generate image", "create image",
+      "görsel hazırla", "resim hazırla", "fotoğraf hazırla", "foto yap", "foto oluştur",
+      "görsel ver", "resim ver", "fotoğraf ver", "görselini yap", "resmini yap",
+      "video yap", "video oluştur", "video hazırla", // video isteklerinde de görsele düşelim
     ];
     return triggers.some((k) => t.includes(k));
   };
