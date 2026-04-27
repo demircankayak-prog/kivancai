@@ -19,6 +19,7 @@ type Msg = {
   content: string;
   attachments?: Attachment[];
   generatedImage?: string; // watermarklı data url
+  generatedVideo?: string; // video url
 };
 
 interface ModelOption {
@@ -73,6 +74,7 @@ function Index() {
   const [recording, setRecording] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileToDataUrl = (file: File): Promise<string> =>
@@ -179,7 +181,18 @@ function Index() {
       "bir görsel", "bir resim", "image of", "generate image", "create image",
       "görsel hazırla", "resim hazırla", "fotoğraf hazırla", "foto yap", "foto oluştur",
       "görsel ver", "resim ver", "fotoğraf ver", "görselini yap", "resmini yap",
-      "video yap", "video oluştur", "video hazırla", // video isteklerinde de görsele düşelim
+    ];
+    return triggers.some((k) => t.includes(k));
+  };
+
+  // Video oluşturma niyeti
+  const isVideoRequest = (text: string): boolean => {
+    const t = text.toLowerCase();
+    if (t.startsWith("/video")) return true;
+    const triggers = [
+      "video oluştur", "video yap", "video hazırla", "video ver",
+      "bir video", "videosunu yap", "generate video", "create video",
+      "video çek", "klip yap", "klip oluştur",
     ];
     return triggers.some((k) => t.includes(k));
   };
@@ -210,6 +223,48 @@ function Index() {
     }
   };
 
+  const generateVideo = async (prompt: string) => {
+    setGeneratingVideo(true);
+    setMessages((p) => [
+      ...p,
+      { role: "assistant", content: "🎬 Video hazırlanıyor kanka, bu 30-90 saniye sürebilir..." },
+    ]);
+    try {
+      const cleanPrompt = prompt.replace(/^\/video\s*/i, "");
+      const resp = await fetch("/api/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: cleanPrompt }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.video) {
+        setMessages((p) => {
+          const arr = [...p];
+          arr[arr.length - 1] = { role: "assistant", content: `⚠️ ${data.error || "Video oluşturulamadı"}` };
+          return arr;
+        });
+        return;
+      }
+      setMessages((p) => {
+        const arr = [...p];
+        arr[arr.length - 1] = {
+          role: "assistant",
+          content: "İşte istediğin video kanka 🎬",
+          generatedVideo: data.video,
+        };
+        return arr;
+      });
+    } catch (e) {
+      setMessages((p) => {
+        const arr = [...p];
+        arr[arr.length - 1] = { role: "assistant", content: "⚠️ Video oluşturulurken hata oldu." };
+        return arr;
+      });
+    } finally {
+      setGeneratingVideo(false);
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem("kivanc-saved-chats");
     if (stored) try { setSavedChats(JSON.parse(stored)); } catch {}
@@ -228,7 +283,7 @@ function Index() {
   };
 
   const sendMessage = async (text: string) => {
-    if ((!text.trim() && pendingAttachments.length === 0) || streaming || generatingImage) return;
+    if ((!text.trim() && pendingAttachments.length === 0) || streaming || generatingImage || generatingVideo) return;
     if (!requireAuth()) return;
 
     const userMsg: Msg = {
@@ -241,6 +296,12 @@ function Index() {
     const newMessages: Msg[] = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+
+    // Video oluşturma isteği mi? (önce kontrol et — "video" kelimesi geçmesi yeterli)
+    if (isVideoRequest(text)) {
+      await generateVideo(text);
+      return;
+    }
 
     // Görsel oluşturma isteği mi?
     if (isImageRequest(text)) {
