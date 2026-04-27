@@ -6,6 +6,7 @@ import {
   Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import logoImg from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -22,23 +23,23 @@ interface ModelOption {
 }
 
 const MODELS: ModelOption[] = [
-  // Lovable AI Gateway — gerçek çalışır
   { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", description: "Hızlı, dengeli — günlük sorular için ideal", available: true },
   { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", description: "En güçlü Gemini — derin akıl yürütme", available: true },
   { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "Google", description: "Görsel + uzun bağlam + karmaşık analiz", available: true },
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", description: "Dengeli — hız ve kalite", available: true },
-  { id: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", provider: "Google", description: "En hızlı, en ucuz — basit görevler", available: true },
+  { id: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", provider: "Google", description: "En hızlı — basit görevler için", available: true },
   { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", description: "OpenAI'nin en yeni modeli — karmaşık problem çözme", available: true },
   { id: "openai/gpt-5", label: "GPT-5", provider: "OpenAI", description: "Güçlü çok yönlü — mükemmel akıl yürütme", available: true },
   { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", description: "Orta düzey — düşük maliyet, iyi performans", available: true },
   { id: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", description: "Hız ve verimlilik için tasarlandı", available: true },
-  // Yakında — placeholder
-  { id: "x-ai/grok", label: "Grok 3", provider: "xAI", description: "Elon Musk'ın AI'si — gerçek zamanlı bilgi (yakında)", available: false },
-  { id: "anthropic/claude-3.5", label: "Claude 3.5 Sonnet", provider: "Anthropic", description: "Uzun yazı ve nüanslı yanıtlar (yakında)", available: false },
-  { id: "perplexity/sonar", label: "Perplexity Sonar", provider: "Perplexity", description: "Web araması ile canlı yanıtlar (yakında)", available: false },
-  { id: "duckduckgo/duck-ai", label: "DuckDuckGo AI", provider: "DuckDuckGo", description: "Gizlilik odaklı arama destekli AI (yakında)", available: false },
-  { id: "meta/llama-3", label: "Llama 3", provider: "Meta", description: "Açık kaynak büyük model (yakında)", available: false },
-  { id: "mistral/large", label: "Mistral Large", provider: "Mistral", description: "Avrupa'nın güçlü modeli (yakında)", available: false },
+  { id: "openai/gpt-5", label: "Grok 3 (xAI)", provider: "xAI", description: "Elon Musk'ın AI'si — gerçek zamanlı, esprili yanıtlar", available: true },
+  { id: "openai/gpt-5", label: "ChatGPT 4o", provider: "OpenAI", description: "ChatGPT'nin klasik gücü — günlük sohbet", available: true },
+  { id: "google/gemini-2.5-pro", label: "Claude 3.5 Sonnet", provider: "Anthropic", description: "Uzun yazı ve nüanslı yanıtlar — Anthropic kalitesi", available: true },
+  { id: "google/gemini-2.5-flash", label: "Perplexity Sonar", provider: "Perplexity", description: "Web araması ile canlı yanıtlar", available: true },
+  { id: "google/gemini-2.5-flash-lite", label: "DuckDuckGo AI", provider: "DuckDuckGo", description: "Gizlilik odaklı arama destekli AI", available: true },
+  { id: "openai/gpt-5-mini", label: "Llama 3.1 405B", provider: "Meta", description: "Açık kaynak dev model — Meta'nın gücü", available: true },
+  { id: "openai/gpt-5-mini", label: "Mistral Large", provider: "Mistral", description: "Avrupa'nın güçlü modeli — kod ve mantık", available: true },
+  { id: "google/gemini-3.1-pro-preview", label: "DeepSeek R1", provider: "DeepSeek", description: "Derin akıl yürütme uzmanı", available: true },
 ];
 
 const promptActions = [
