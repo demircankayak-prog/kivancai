@@ -641,6 +641,20 @@ function Index() {
                           </a>
                         </div>
                       )}
+                      {m.generatedVideo && (
+                        <div className="mb-2">
+                          <video src={m.generatedVideo} controls className="max-h-96 w-full rounded-lg" />
+                          <a
+                            href={m.generatedVideo}
+                            download="kivanc-ai-video.mp4"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-block text-xs font-medium text-brand hover:underline"
+                          >
+                            ⬇ İndir
+                          </a>
+                        </div>
+                      )}
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
