@@ -409,9 +409,9 @@ function Index() {
                         <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           AI Modelleri ({MODELS.length})
                         </p>
-                        {MODELS.map((m) => (
+                        {MODELS.map((m, idx) => (
                           <button
-                            key={m.id}
+                            key={`${m.label}-${idx}`}
                             type="button"
                             disabled={!m.available}
                             onClick={() => {
