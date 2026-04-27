@@ -55,7 +55,8 @@ function Index() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [streaming, setStreaming] = useState(false);
-  const [model, setModel] = useState(MODELS[0].id);
+  const [modelKey, setModelKey] = useState(MODELS[0].label);
+  const selectedModel = MODELS.find((m) => m.label === modelKey) ?? MODELS[0];
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [savedChats, setSavedChats] = useState<Array<{ id: string; title: string; messages: Msg[] }>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -94,7 +95,7 @@ function Index() {
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages, model }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel.id }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -314,7 +315,7 @@ function Index() {
               <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
             <div className="hidden md:block text-xs text-muted-foreground">
-              {MODELS.find((m) => m.id === model)?.label}
+              {selectedModel.label}
             </div>
 
             <div className="flex items-center gap-3">
@@ -416,12 +417,12 @@ function Index() {
                             disabled={!m.available}
                             onClick={() => {
                               if (m.available) {
-                                setModel(m.id);
+                                setModelKey(m.label);
                                 setModelMenuOpen(false);
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
-                              model === m.id ? "bg-brand/15 text-brand" : "text-foreground hover:bg-accent"
+                              modelKey === m.label ? "bg-brand/15 text-brand" : "text-foreground hover:bg-accent"
                             } ${!m.available ? "cursor-not-allowed opacity-50" : ""}`}
                             title={m.description}
                           >
