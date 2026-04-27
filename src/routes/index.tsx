@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import {
   FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
   Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
+  Paperclip, Image as ImageIcon, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
@@ -12,7 +13,13 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Attachment = { kind: "image" | "video"; url: string; name?: string };
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  attachments?: Attachment[];
+  generatedImage?: string; // watermarklı data url
+};
 
 interface ModelOption {
   id: string;
@@ -64,6 +71,141 @@ function Index() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const [recording, setRecording] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+  const MAX_VIDEO_SECONDS = 11;
+  const checkVideoDuration = (file: File): Promise<number> =>
+    new Promise((resolve) => {
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(v.src);
+        resolve(v.duration);
+      };
+      v.onerror = () => resolve(0);
+      v.src = URL.createObjectURL(file);
+    });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!requireAuth()) return;
+    for (const f of files) {
+      if (f.type.startsWith("image/")) {
+        const url = await fileToDataUrl(f);
+        setPendingAttachments((p) => [...p, { kind: "image", url, name: f.name }]);
+      } else if (f.type.startsWith("video/")) {
+        const dur = await checkVideoDuration(f);
+        if (dur > MAX_VIDEO_SECONDS + 0.5) {
+          alert(`Video en fazla ${MAX_VIDEO_SECONDS} saniye olmalı. Bu video ${dur.toFixed(1)}s.`);
+          continue;
+        }
+        const url = await fileToDataUrl(f);
+        setPendingAttachments((p) => [...p, { kind: "video", url, name: f.name }]);
+      } else {
+        alert("Sadece görsel ve video kabul ediliyor.");
+      }
+    }
+  };
+
+  // Watermark ekle (sağ alta logo + "Kıvanç AI" yazısı)
+  const addWatermark = (imageDataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+
+        const logo = new Image();
+        logo.crossOrigin = "anonymous";
+        logo.onload = () => {
+          const pad = Math.max(16, Math.round(img.width * 0.02));
+          const logoSize = Math.max(48, Math.round(img.width * 0.08));
+          const text = "Kıvanç AI";
+          const fontSize = Math.max(18, Math.round(img.width * 0.025));
+          ctx.font = `bold ${fontSize}px sans-serif`;
+          const textWidth = ctx.measureText(text).width;
+          const boxH = logoSize + pad;
+          const boxW = logoSize + textWidth + pad * 1.5;
+          const x = canvas.width - boxW - pad;
+          const y = canvas.height - boxH - pad;
+          // arka plan
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          const r = boxH / 2;
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + boxW, y, x + boxW, y + boxH, r);
+          ctx.arcTo(x + boxW, y + boxH, x, y + boxH, r);
+          ctx.arcTo(x, y + boxH, x, y, r);
+          ctx.arcTo(x, y, x + boxW, y, r);
+          ctx.closePath();
+          ctx.fill();
+          // logo
+          ctx.drawImage(logo, x + pad / 2, y + (boxH - logoSize) / 2, logoSize, logoSize);
+          // metin
+          ctx.fillStyle = "white";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, x + pad / 2 + logoSize + pad / 2, y + boxH / 2);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        logo.onerror = () => resolve(imageDataUrl);
+        logo.src = logoImg;
+      };
+      img.onerror = () => resolve(imageDataUrl);
+      img.src = imageDataUrl;
+    });
+
+  // Mesajdan görsel oluşturma niyeti var mı?
+  const isImageRequest = (text: string): boolean => {
+    const t = text.toLowerCase();
+    if (t.startsWith("/görsel") || t.startsWith("/gorsel") || t.startsWith("/image")) return true;
+    const triggers = [
+      "görsel oluştur", "görsel yap", "resim oluştur", "resim yap",
+      "fotoğraf oluştur", "fotoğraf yap", "çiz", "görselleştir",
+      "bir görsel", "bir resim", "image of", "generate image", "create image",
+    ];
+    return triggers.some((k) => t.includes(k));
+  };
+
+  const generateImage = async (prompt: string, inputImage?: string) => {
+    setGeneratingImage(true);
+    try {
+      const cleanPrompt = prompt.replace(/^\/(görsel|gorsel|image)\s*/i, "");
+      const resp = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: cleanPrompt, inputImage }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.image) {
+        setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${data.error || "Görsel oluşturulamadı"}` }]);
+        return;
+      }
+      const watermarked = await addWatermark(data.image);
+      setMessages((p) => [
+        ...p,
+        { role: "assistant", content: "İşte istediğin görsel kanka 🎨", generatedImage: watermarked },
+      ]);
+    } catch (e) {
+      setMessages((p) => [...p, { role: "assistant", content: "⚠️ Görsel oluşturulurken hata oldu." }]);
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("kivanc-saved-chats");
@@ -83,19 +225,61 @@ function Index() {
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || streaming) return;
+    if ((!text.trim() && pendingAttachments.length === 0) || streaming || generatingImage) return;
     if (!requireAuth()) return;
 
-    const newMessages: Msg[] = [...messages, { role: "user", content: text }];
+    const userMsg: Msg = {
+      role: "user",
+      content: text,
+      attachments: pendingAttachments.length ? pendingAttachments : undefined,
+    };
+    const attachmentsForThisSend = pendingAttachments;
+    setPendingAttachments([]);
+    const newMessages: Msg[] = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+
+    // Görsel oluşturma isteği mi?
+    if (isImageRequest(text)) {
+      const firstImage = attachmentsForThisSend.find((a) => a.kind === "image");
+      await generateImage(text, firstImage?.url);
+      return;
+    }
+
     setStreaming(true);
 
     try {
+      // Multimodal: görselleri AI'ya yolla
+      const apiMessages = newMessages.map((m) => {
+        if (m.role === "user" && m.attachments && m.attachments.length > 0) {
+          const images = m.attachments.filter((a) => a.kind === "image");
+          if (images.length > 0) {
+            const videoNote = m.attachments.filter((a) => a.kind === "video").length > 0
+              ? "\n[Kullanıcı ayrıca bir video yükledi — videoları henüz analiz edemiyorum, ama açıklamasını sorabilirsin.]"
+              : "";
+            return {
+              role: "user",
+              content: [
+                { type: "text", text: (m.content || "Bu görsel(ler)e bak.") + videoNote },
+                ...images.map((img) => ({ type: "image_url", image_url: { url: img.url } })),
+              ],
+            };
+          }
+          if (m.attachments.some((a) => a.kind === "video")) {
+            return {
+              role: "user",
+              content: (m.content || "Bir video yükledim.") +
+                "\n[Not: Kullanıcı bir video yükledi. Şu an video içeriğini analiz edemiyorum — kullanıcıya videoda ne olduğunu sormalı veya açıklamasını istemeliyim.]",
+            };
+          }
+        }
+        return { role: m.role, content: m.content };
+      });
+
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages, model: selectedModel.id }),
+        body: JSON.stringify({ messages: apiMessages, model: selectedModel.id }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -370,12 +554,45 @@ function Index() {
                         ? "bg-primary text-primary-foreground"
                         : "bg-card text-foreground border border-border"
                     }`}>
+                      {m.attachments && m.attachments.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {m.attachments.map((a, j) =>
+                            a.kind === "image" ? (
+                              <img key={j} src={a.url} alt="" className="max-h-48 rounded-lg object-cover" />
+                            ) : (
+                              <video key={j} src={a.url} controls className="max-h-48 rounded-lg" />
+                            )
+                          )}
+                        </div>
+                      )}
+                      {m.generatedImage && (
+                        <div className="mb-2">
+                          <img src={m.generatedImage} alt="Oluşturulan görsel" className="max-h-96 w-full rounded-lg object-contain" />
+                          <a
+                            href={m.generatedImage}
+                            download="kivanc-ai-gorsel.png"
+                            className="mt-2 inline-block text-xs font-medium text-brand hover:underline"
+                          >
+                            ⬇ İndir
+                          </a>
+                        </div>
+                      )}
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
                     </div>
                   </div>
                 ))}
+                {generatingImage && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
+                      <ImageIcon size={16} />
+                    </div>
+                    <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+                      <Loader2 className="inline animate-spin" size={14} /> Görsel oluşturuluyor…
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -383,11 +600,40 @@ function Index() {
           {/* Composer */}
           <div className="px-4 pb-6 pt-2 sm:px-8">
             <form onSubmit={handleSubmit} className="mx-auto max-w-3xl rounded-2xl border border-input bg-card/95 p-4 shadow-[var(--shadow-composer)] backdrop-blur-sm">
+              {pendingAttachments.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {pendingAttachments.map((a, i) => (
+                    <div key={i} className="relative">
+                      {a.kind === "image" ? (
+                        <img src={a.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                      ) : (
+                        <video src={a.url} className="h-16 w-16 rounded-lg object-cover" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPendingAttachments((p) => p.filter((_, j) => j !== i))}
+                        className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-destructive text-destructive-foreground"
+                        aria-label="Kaldır"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                hidden
+                onChange={handleFileSelect}
+              />
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={user ? "Bir şey sor…" : "Mesaj göndermek için giriş yap…"}
+                placeholder={user ? "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')" : "Mesaj göndermek için giriş yap…"}
                 className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
               />
               <div className="mt-3 flex items-center justify-between gap-3">
@@ -401,6 +647,24 @@ function Index() {
                     className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
                   >
                     <Plus size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Dosya ekle"
+                    title="Görsel veya video yükle (video maks 11 sn)"
+                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInput((p) => p ? p : "Görsel oluştur: ")}
+                    aria-label="Görsel oluştur"
+                    title="Görsel oluştur"
+                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                  >
+                    <ImageIcon size={18} />
                   </button>
 
                   {modelMenuOpen && (
