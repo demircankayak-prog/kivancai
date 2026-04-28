@@ -710,6 +710,90 @@ function Index() {
                 hidden
                 onChange={handleFileSelect}
               />
+              {quickPanel && (
+                <div className="mb-3 rounded-xl border border-brand/40 bg-brand/5 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-brand">
+                      {quickPanel === "image" ? "🎨 Görsel oluştur" : "🎬 Video oluştur (Kling AI)"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setQuickPanel(null); setQuickPrompt(""); }}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={quickPrompt}
+                    onChange={(e) => setQuickPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && quickPrompt.trim()) {
+                        e.preventDefault();
+                        const p = quickPrompt.trim();
+                        const panel = quickPanel;
+                        const dur = videoDuration;
+                        setQuickPanel(null);
+                        setQuickPrompt("");
+                        if (panel === "image") {
+                          setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
+                          generateImage(p);
+                        } else {
+                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          generateVideo(p, dur);
+                        }
+                      }
+                    }}
+                    placeholder={quickPanel === "image" ? "Ne çizmek istiyorsun? (ör: gün batımında dağ)" : "Nasıl bir video? (ör: sahilde koşan köpek)"}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                  />
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    {quickPanel === "video" ? (
+                      <div className="flex items-center gap-1 rounded-md bg-background p-1">
+                        <button
+                          type="button"
+                          onClick={() => setVideoDuration(5)}
+                          className={`rounded px-2 py-1 text-xs font-medium transition ${videoDuration === 5 ? "bg-brand text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          5 sn
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVideoDuration(10)}
+                          className={`rounded px-2 py-1 text-xs font-medium transition ${videoDuration === 10 ? "bg-brand text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          10 sn
+                        </button>
+                      </div>
+                    ) : <span />}
+                    <button
+                      type="button"
+                      disabled={!quickPrompt.trim() || generatingImage || generatingVideo}
+                      onClick={() => {
+                        const p = quickPrompt.trim();
+                        if (!p) return;
+                        const panel = quickPanel;
+                        const dur = videoDuration;
+                        setQuickPanel(null);
+                        setQuickPrompt("");
+                        if (panel === "image") {
+                          setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
+                          generateImage(p);
+                        } else {
+                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          generateVideo(p, dur);
+                        }
+                      }}
+                      className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                    >
+                      Oluştur →
+                    </button>
+                  </div>
+                </div>
+              )}
               <input
                 type="text"
                 value={input}
