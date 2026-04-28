@@ -17,15 +17,18 @@ const BodySchema = z.object({
     .max(80),
 });
 
-const SYSTEM = "Sen Kıvanç AI içinde çalışan net, hızlı ve doğal bir sohbet asistanısın. Türkçe konuşulursa Türkçe cevap ver.";
+const SYSTEM =
+  "Sen Kıvanç AI içinde çalışan net, hızlı ve doğal bir sohbet asistanısın. Türkçe konuşulursa Türkçe cevap ver.";
 
 const contentToText = (content: unknown): string => {
   if (typeof content === "string") return content.slice(0, 20000);
   if (Array.isArray(content)) {
     return content
       .map((part) => {
-        if (part && typeof part === "object" && "text" in part && typeof part.text === "string") return part.text;
-        if (part && typeof part === "object" && "image_url" in part) return "[Kullanıcı bir görsel ekledi]";
+        if (part && typeof part === "object" && "text" in part && typeof part.text === "string")
+          return part.text;
+        if (part && typeof part === "object" && "image_url" in part)
+          return "[Kullanıcı bir görsel ekledi]";
         return "";
       })
       .filter(Boolean)
@@ -42,11 +45,16 @@ export const Route = createFileRoute("/api/custom-chat")({
         try {
           const parsed = BodySchema.safeParse(await request.json());
           if (!parsed.success) {
-            return Response.json({ error: "API ayarları veya mesaj formatı hatalı." }, { status: 400 });
+            return Response.json(
+              { error: "API ayarları veya mesaj formatı hatalı." },
+              { status: 400 },
+            );
           }
 
           const { provider, apiKey, model, endpoint, messages } = parsed.data;
-          const textMessages = messages.map((m) => ({ role: m.role, content: contentToText(m.content) })).filter((m) => m.content.trim());
+          const textMessages = messages
+            .map((m) => ({ role: m.role, content: contentToText(m.content) }))
+            .filter((m) => m.content.trim());
 
           if (provider === "anthropic") {
             const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -66,11 +74,17 @@ export const Route = createFileRoute("/api/custom-chat")({
 
             const data = await resp.json().catch(() => null);
             if (!resp.ok) {
-              return Response.json({ error: data?.error?.message || "Anthropic API isteği başarısız oldu." }, { status: resp.status });
+              return Response.json(
+                { error: data?.error?.message || "Anthropic API isteği başarısız oldu." },
+                { status: resp.status },
+              );
             }
 
             const content = Array.isArray(data?.content)
-              ? data.content.map((p: any) => (p?.type === "text" ? p.text : "")).join("\n").trim()
+              ? data.content
+                  .map((p: any) => (p?.type === "text" ? p.text : ""))
+                  .join("\n")
+                  .trim()
               : "";
             return Response.json({ content: content || "Yanıt boş döndü." });
           }
@@ -91,14 +105,24 @@ export const Route = createFileRoute("/api/custom-chat")({
 
           const data = await resp.json().catch(() => null);
           if (!resp.ok) {
-            return Response.json({ error: data?.error?.message || data?.message || "Poe API isteği başarısız oldu." }, { status: resp.status });
+            return Response.json(
+              { error: data?.error?.message || data?.message || "Poe API isteği başarısız oldu." },
+              { status: resp.status },
+            );
           }
 
-          const content = data?.choices?.[0]?.message?.content || data?.output_text || data?.text || "Yanıt boş döndü.";
+          const content =
+            data?.choices?.[0]?.message?.content ||
+            data?.output_text ||
+            data?.text ||
+            "Yanıt boş döndü.";
           return Response.json({ content });
         } catch (e) {
           console.error("custom chat error:", e);
-          return Response.json({ error: e instanceof Error ? e.message : "Bilinmeyen hata" }, { status: 500 });
+          return Response.json(
+            { error: e instanceof Error ? e.message : "Bilinmeyen hata" },
+            { status: 500 },
+          );
         }
       },
     },

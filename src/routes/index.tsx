@@ -2,9 +2,28 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
-  FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
-  Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
-  Paperclip, Image as ImageIcon, Loader2, Film, Settings2, KeyRound,
+  FileText,
+  Lightbulb,
+  Menu,
+  Mic,
+  Palette,
+  PenSquare,
+  Plus,
+  Search,
+  Send,
+  Sparkles,
+  User,
+  LogOut,
+  Save,
+  Info,
+  X,
+  Bookmark,
+  Paperclip,
+  Image as ImageIcon,
+  Loader2,
+  Film,
+  Settings2,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
@@ -37,30 +56,140 @@ interface ModelOption {
 }
 
 const MODELS: ModelOption[] = [
-  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", provider: "Google", description: "Hızlı, dengeli — günlük sorular için ideal", available: true },
-  { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", provider: "Google", description: "En güçlü Gemini — derin akıl yürütme", available: true },
-  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", provider: "Google", description: "Görsel + uzun bağlam + karmaşık analiz", available: true },
-  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google", description: "Dengeli — hız ve kalite", available: true },
-  { id: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", provider: "Google", description: "En hızlı — basit görevler için", available: true },
-  { id: "openai/gpt-5.2", label: "GPT-5.2", provider: "OpenAI", description: "OpenAI'nin en yeni modeli — karmaşık problem çözme", available: true },
-  { id: "openai/gpt-5", label: "GPT-5", provider: "OpenAI", description: "Güçlü çok yönlü — mükemmel akıl yürütme", available: true },
-  { id: "openai/gpt-5-mini", label: "GPT-5 Mini", provider: "OpenAI", description: "Orta düzey — düşük maliyet, iyi performans", available: true },
-  { id: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", description: "Hız ve verimlilik için tasarlandı", available: true },
-  { id: "openai/gpt-5", label: "Grok 3 (xAI)", provider: "xAI", description: "Elon Musk'ın AI'si — gerçek zamanlı, esprili yanıtlar", available: true },
-  { id: "openai/gpt-5", label: "ChatGPT 4o", provider: "OpenAI", description: "ChatGPT'nin klasik gücü — günlük sohbet", available: true },
-  { id: "google/gemini-2.5-pro", label: "Claude 3.5 Sonnet", provider: "Anthropic", description: "Uzun yazı ve nüanslı yanıtlar — Anthropic kalitesi", available: true },
-  { id: "google/gemini-2.5-flash", label: "Perplexity Sonar", provider: "Perplexity", description: "Web araması ile canlı yanıtlar", available: true },
-  { id: "google/gemini-2.5-flash-lite", label: "DuckDuckGo AI", provider: "DuckDuckGo", description: "Gizlilik odaklı arama destekli AI", available: true },
-  { id: "openai/gpt-5-mini", label: "Llama 3.1 405B", provider: "Meta", description: "Açık kaynak dev model — Meta'nın gücü", available: true },
-  { id: "openai/gpt-5-mini", label: "Mistral Large", provider: "Mistral", description: "Avrupa'nın güçlü modeli — kod ve mantık", available: true },
-  { id: "google/gemini-3.1-pro-preview", label: "DeepSeek R1", provider: "DeepSeek", description: "Derin akıl yürütme uzmanı", available: true },
+  {
+    id: "google/gemini-3-flash-preview",
+    label: "Gemini 3 Flash",
+    provider: "Google",
+    description: "Hızlı, dengeli — günlük sorular için ideal",
+    available: true,
+  },
+  {
+    id: "google/gemini-3.1-pro-preview",
+    label: "Gemini 3.1 Pro",
+    provider: "Google",
+    description: "En güçlü Gemini — derin akıl yürütme",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    provider: "Google",
+    description: "Görsel + uzun bağlam + karmaşık analiz",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
+    provider: "Google",
+    description: "Dengeli — hız ve kalite",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-flash-lite",
+    label: "Gemini 2.5 Flash Lite",
+    provider: "Google",
+    description: "En hızlı — basit görevler için",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5.2",
+    label: "GPT-5.2",
+    provider: "OpenAI",
+    description: "OpenAI'nin en yeni modeli — karmaşık problem çözme",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5",
+    label: "GPT-5",
+    provider: "OpenAI",
+    description: "Güçlü çok yönlü — mükemmel akıl yürütme",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5-mini",
+    label: "GPT-5 Mini",
+    provider: "OpenAI",
+    description: "Orta düzey — düşük maliyet, iyi performans",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5-nano",
+    label: "GPT-5 Nano",
+    provider: "OpenAI",
+    description: "Hız ve verimlilik için tasarlandı",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5",
+    label: "Grok 3 (xAI)",
+    provider: "xAI",
+    description: "Elon Musk'ın AI'si — gerçek zamanlı, esprili yanıtlar",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5",
+    label: "ChatGPT 4o",
+    provider: "OpenAI",
+    description: "ChatGPT'nin klasik gücü — günlük sohbet",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    label: "Claude 3.5 Sonnet",
+    provider: "Anthropic",
+    description: "Uzun yazı ve nüanslı yanıtlar — Anthropic kalitesi",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-flash",
+    label: "Perplexity Sonar",
+    provider: "Perplexity",
+    description: "Web araması ile canlı yanıtlar",
+    available: true,
+  },
+  {
+    id: "google/gemini-2.5-flash-lite",
+    label: "DuckDuckGo AI",
+    provider: "DuckDuckGo",
+    description: "Gizlilik odaklı arama destekli AI",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5-mini",
+    label: "Llama 3.1 405B",
+    provider: "Meta",
+    description: "Açık kaynak dev model — Meta'nın gücü",
+    available: true,
+  },
+  {
+    id: "openai/gpt-5-mini",
+    label: "Mistral Large",
+    provider: "Mistral",
+    description: "Avrupa'nın güçlü modeli — kod ve mantık",
+    available: true,
+  },
+  {
+    id: "google/gemini-3.1-pro-preview",
+    label: "DeepSeek R1",
+    provider: "DeepSeek",
+    description: "Derin akıl yürütme uzmanı",
+    available: true,
+  },
 ];
 
 const promptActions = [
-  { label: "Proje Başlat", icon: FileText, prompt: "Bana yeni bir proje fikri için detaylı bir başlangıç planı yap." },
+  {
+    label: "Proje Başlat",
+    icon: FileText,
+    prompt: "Bana yeni bir proje fikri için detaylı bir başlangıç planı yap.",
+  },
   { label: "Tasarım Yap", icon: Palette, prompt: "Modern ve şık bir tasarım önerisi yapar mısın?" },
   { label: "Araştırma Yap", icon: Search, prompt: "Şu konu hakkında derin araştırma yap: " },
-  { label: "Fikir Geliştir", icon: Lightbulb, prompt: "Şu fikri geliştir ve daha iyi hale getir: " },
+  {
+    label: "Fikir Geliştir",
+    icon: Lightbulb,
+    prompt: "Şu fikri geliştir ve daha iyi hale getir: ",
+  },
 ];
 
 function Index() {
@@ -72,7 +201,9 @@ function Index() {
   const [modelKey, setModelKey] = useState(MODELS[0].label);
   const selectedModel = MODELS.find((m) => m.label === modelKey) ?? MODELS[0];
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
-  const [savedChats, setSavedChats] = useState<Array<{ id: string; title: string; messages: Msg[] }>>([]);
+  const [savedChats, setSavedChats] = useState<
+    Array<{ id: string; title: string; messages: Msg[] }>
+  >([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [aboutOpen, setAboutOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,7 +220,9 @@ function Index() {
   const [customAiProvider, setCustomAiProvider] = useState<CustomAiProvider>("anthropic");
   const [customAiKey, setCustomAiKey] = useState("");
   const [customAiModel, setCustomAiModel] = useState(CUSTOM_AI_MODELS.anthropic[0]);
-  const [customAiEndpoint, setCustomAiEndpoint] = useState("https://api.poe.com/v1/chat/completions");
+  const [customAiEndpoint, setCustomAiEndpoint] = useState(
+    "https://api.poe.com/v1/chat/completions",
+  );
 
   const openQuickPanel = (panel: "image" | "video" | "settings") => {
     setModelMenuOpen(false);
@@ -201,11 +334,29 @@ function Index() {
     const t = text.toLowerCase();
     if (t.startsWith("/görsel") || t.startsWith("/gorsel") || t.startsWith("/image")) return true;
     const triggers = [
-      "görsel oluştur", "görsel yap", "resim oluştur", "resim yap",
-      "fotoğraf oluştur", "fotoğraf yap", "çiz", "görselleştir",
-      "bir görsel", "bir resim", "image of", "generate image", "create image",
-      "görsel hazırla", "resim hazırla", "fotoğraf hazırla", "foto yap", "foto oluştur",
-      "görsel ver", "resim ver", "fotoğraf ver", "görselini yap", "resmini yap",
+      "görsel oluştur",
+      "görsel yap",
+      "resim oluştur",
+      "resim yap",
+      "fotoğraf oluştur",
+      "fotoğraf yap",
+      "çiz",
+      "görselleştir",
+      "bir görsel",
+      "bir resim",
+      "image of",
+      "generate image",
+      "create image",
+      "görsel hazırla",
+      "resim hazırla",
+      "fotoğraf hazırla",
+      "foto yap",
+      "foto oluştur",
+      "görsel ver",
+      "resim ver",
+      "fotoğraf ver",
+      "görselini yap",
+      "resmini yap",
     ];
     return triggers.some((k) => t.includes(k));
   };
@@ -215,9 +366,17 @@ function Index() {
     const t = text.toLowerCase();
     if (t.startsWith("/video")) return true;
     const triggers = [
-      "video oluştur", "video yap", "video hazırla", "video ver",
-      "bir video", "videosunu yap", "generate video", "create video",
-      "video çek", "klip yap", "klip oluştur",
+      "video oluştur",
+      "video yap",
+      "video hazırla",
+      "video ver",
+      "bir video",
+      "videosunu yap",
+      "generate video",
+      "create video",
+      "video çek",
+      "klip yap",
+      "klip oluştur",
     ];
     return triggers.some((k) => t.includes(k));
   };
@@ -233,16 +392,26 @@ function Index() {
       });
       const data = await resp.json();
       if (!resp.ok || !data.image) {
-        setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${data.error || "Görsel oluşturulamadı"}` }]);
+        setMessages((p) => [
+          ...p,
+          { role: "assistant", content: `⚠️ ${data.error || "Görsel oluşturulamadı"}` },
+        ]);
         return;
       }
       const watermarked = await addWatermark(data.image);
       setMessages((p) => [
         ...p,
-        { role: "assistant", content: "İşte istediğin görsel kanka 🎨", generatedImage: watermarked },
+        {
+          role: "assistant",
+          content: "İşte istediğin görsel kanka 🎨",
+          generatedImage: watermarked,
+        },
       ]);
     } catch (e) {
-      setMessages((p) => [...p, { role: "assistant", content: "⚠️ Görsel oluşturulurken hata oldu." }]);
+      setMessages((p) => [
+        ...p,
+        { role: "assistant", content: "⚠️ Görsel oluşturulurken hata oldu." },
+      ]);
     } finally {
       setGeneratingImage(false);
     }
@@ -252,7 +421,10 @@ function Index() {
     setGeneratingVideo(true);
     setMessages((p) => [
       ...p,
-      { role: "assistant", content: `🎬 ${duration} saniyelik video hazırlanıyor kanka (Kling AI), bu 1-3 dk sürebilir...` },
+      {
+        role: "assistant",
+        content: `🎬 ${duration} saniyelik video hazırlanıyor kanka (Kling AI), bu 1-3 dk sürebilir...`,
+      },
     ]);
     try {
       const cleanPrompt = prompt.replace(/^\/video\s*/i, "");
@@ -265,7 +437,10 @@ function Index() {
       if (!resp.ok || !data.video) {
         setMessages((p) => {
           const arr = [...p];
-          arr[arr.length - 1] = { role: "assistant", content: `⚠️ ${data.error || "Video oluşturulamadı"}` };
+          arr[arr.length - 1] = {
+            role: "assistant",
+            content: `⚠️ ${data.error || "Video oluşturulamadı"}`,
+          };
           return arr;
         });
         return;
@@ -292,7 +467,10 @@ function Index() {
 
   useEffect(() => {
     const stored = localStorage.getItem("kivanc-saved-chats");
-    if (stored) try { setSavedChats(JSON.parse(stored)); } catch {}
+    if (stored)
+      try {
+        setSavedChats(JSON.parse(stored));
+      } catch {}
   }, []);
 
   useEffect(() => {
@@ -308,7 +486,13 @@ function Index() {
   };
 
   const sendMessage = async (text: string) => {
-    if ((!text.trim() && pendingAttachments.length === 0) || streaming || generatingImage || generatingVideo) return;
+    if (
+      (!text.trim() && pendingAttachments.length === 0) ||
+      streaming ||
+      generatingImage ||
+      generatingVideo
+    )
+      return;
     if (!requireAuth()) return;
 
     const userMsg: Msg = {
@@ -343,9 +527,10 @@ function Index() {
         if (m.role === "user" && m.attachments && m.attachments.length > 0) {
           const images = m.attachments.filter((a) => a.kind === "image");
           if (images.length > 0) {
-            const videoNote = m.attachments.filter((a) => a.kind === "video").length > 0
-              ? "\n[Kullanıcı ayrıca bir video yükledi — videoları henüz analiz edemiyorum, ama açıklamasını sorabilirsin.]"
-              : "";
+            const videoNote =
+              m.attachments.filter((a) => a.kind === "video").length > 0
+                ? "\n[Kullanıcı ayrıca bir video yükledi — videoları henüz analiz edemiyorum, ama açıklamasını sorabilirsin.]"
+                : "";
             return {
               role: "user",
               content: [
@@ -357,7 +542,8 @@ function Index() {
           if (m.attachments.some((a) => a.kind === "video")) {
             return {
               role: "user",
-              content: (m.content || "Bir video yükledim.") +
+              content:
+                (m.content || "Bir video yükledim.") +
                 "\n[Not: Kullanıcı bir video yükledi. Şu an video içeriğini analiz edemiyorum — kullanıcıya videoda ne olduğunu sormalı veya açıklamasını istemeliyim.]",
             };
           }
@@ -367,7 +553,13 @@ function Index() {
 
       if (customAiEnabled) {
         if (!customAiKey.trim()) {
-          setMessages((p) => [...p, { role: "assistant", content: "⚠️ Kişisel AI için önce artı menüsünden API anahtarını girmen gerekiyor." }]);
+          setMessages((p) => [
+            ...p,
+            {
+              role: "assistant",
+              content: "⚠️ Kişisel AI için önce artı menüsünden API anahtarını girmen gerekiyor.",
+            },
+          ]);
           setStreaming(false);
           return;
         }
@@ -385,11 +577,20 @@ function Index() {
         });
         const data = await resp.json().catch(() => ({ error: "Kişisel AI yanıtı okunamadı." }));
         if (!resp.ok) {
-          setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${data.error || "Kişisel AI isteği başarısız oldu."}` }]);
+          setMessages((p) => [
+            ...p,
+            {
+              role: "assistant",
+              content: `⚠️ ${data.error || "Kişisel AI isteği başarısız oldu."}`,
+            },
+          ]);
           setStreaming(false);
           return;
         }
-        setMessages((p) => [...p, { role: "assistant", content: data.content || "Yanıt boş döndü." }]);
+        setMessages((p) => [
+          ...p,
+          { role: "assistant", content: data.content || "Yanıt boş döndü." },
+        ]);
         setStreaming(false);
         return;
       }
@@ -430,7 +631,9 @@ function Index() {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               assistantText += delta;
-              setMessages((p) => p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)));
+              setMessages((p) =>
+                p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
+              );
             }
           } catch {
             buffer = line + "\n" + buffer;
@@ -551,8 +754,14 @@ function Index() {
         {sidebarOpen && (
           <aside className="hidden w-52 shrink-0 border-r border-sidebar-border bg-sidebar/95 px-4 py-5 md:flex md:flex-col lg:w-60">
             <div className="flex items-center gap-3">
-              <h2 className="font-serif text-2xl font-bold leading-none text-foreground">Kıvanç AI</h2>
-              <img src={logoImg} alt="Kıvanç AI" className="h-9 w-9 rounded-lg object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
+              <h2 className="font-serif text-2xl font-bold leading-none text-foreground">
+                Kıvanç AI
+              </h2>
+              <img
+                src={logoImg}
+                alt="Kıvanç AI"
+                className="h-9 w-9 rounded-lg object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+              />
             </div>
 
             <button
@@ -577,7 +786,9 @@ function Index() {
             )}
 
             <div className="mt-5 flex-1 overflow-y-auto">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kayıtlı Sohbetler</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Kayıtlı Sohbetler
+              </p>
               {savedChats.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Henüz kayıtlı sohbet yok.</p>
               ) : (
@@ -623,9 +834,15 @@ function Index() {
             <div className="flex items-center gap-3">
               {user ? (
                 <div className="flex items-center gap-2">
-                  <span className="hidden text-sm font-medium text-foreground sm:inline">{displayName}</span>
+                  <span className="hidden text-sm font-medium text-foreground sm:inline">
+                    {displayName}
+                  </span>
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={displayName} className="h-9 w-9 rounded-full border-2 border-brand object-cover shadow-[var(--shadow-avatar)]" />
+                    <img
+                      src={profile.avatar_url}
+                      alt={displayName}
+                      className="h-9 w-9 rounded-full border-2 border-brand object-cover shadow-[var(--shadow-avatar)]"
+                    />
                   ) : (
                     <div className="grid h-9 w-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-[var(--shadow-avatar)]">
                       {initials}
@@ -654,38 +871,54 @@ function Index() {
                     Merhaba {user ? displayName : "Kıvanç"}
                   </h1>
                   <p className="mt-4 text-pretty text-2xl font-medium leading-tight text-foreground sm:text-3xl">
-                    {user ? "Sınır tanımayan AI ile ne yapmak istersin?" : "Başlamak için bir e-posta ile kayıt ol."}
+                    {user
+                      ? "Sınır tanımayan AI ile ne yapmak istersin?"
+                      : "Başlamak için bir e-posta ile kayıt ol."}
                   </p>
                 </div>
               </div>
             ) : (
               <div className="mx-auto max-w-3xl space-y-6">
                 {messages.map((m, i) => (
-                  <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={i}
+                    className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
                     {m.role === "assistant" && (
                       <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
                         <Sparkles size={16} />
                       </div>
                     )}
-                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                      m.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-foreground border border-border"
-                    }`}>
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-foreground border border-border"
+                      }`}
+                    >
                       {m.attachments && m.attachments.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-2">
                           {m.attachments.map((a, j) =>
                             a.kind === "image" ? (
-                              <img key={j} src={a.url} alt="" className="max-h-48 rounded-lg object-cover" />
+                              <img
+                                key={j}
+                                src={a.url}
+                                alt=""
+                                className="max-h-48 rounded-lg object-cover"
+                              />
                             ) : (
                               <video key={j} src={a.url} controls className="max-h-48 rounded-lg" />
-                            )
+                            ),
                           )}
                         </div>
                       )}
                       {m.generatedImage && (
                         <div className="mb-2">
-                          <img src={m.generatedImage} alt="Oluşturulan görsel" className="max-h-96 w-full rounded-lg object-contain" />
+                          <img
+                            src={m.generatedImage}
+                            alt="Oluşturulan görsel"
+                            className="max-h-96 w-full rounded-lg object-contain"
+                          />
                           <a
                             href={m.generatedImage}
                             download="kivanc-ai-gorsel.png"
@@ -697,7 +930,11 @@ function Index() {
                       )}
                       {m.generatedVideo && (
                         <div className="mb-2">
-                          <video src={m.generatedVideo} controls className="max-h-96 w-full rounded-lg" />
+                          <video
+                            src={m.generatedVideo}
+                            controls
+                            className="max-h-96 w-full rounded-lg"
+                          />
                           <a
                             href={m.generatedVideo}
                             download="kivanc-ai-video.mp4"
@@ -731,7 +968,10 @@ function Index() {
 
           {/* Composer */}
           <div className="px-4 pb-6 pt-2 sm:px-8">
-            <form onSubmit={handleSubmit} className="mx-auto max-w-3xl rounded-2xl border border-input bg-card/95 p-4 shadow-[var(--shadow-composer)] backdrop-blur-sm">
+            <form
+              onSubmit={handleSubmit}
+              className="mx-auto max-w-3xl rounded-2xl border border-input bg-card/95 p-4 shadow-[var(--shadow-composer)] backdrop-blur-sm"
+            >
               {pendingAttachments.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {pendingAttachments.map((a, i) => (
@@ -769,7 +1009,10 @@ function Index() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => { setQuickPanel(null); setQuickPrompt(""); }}
+                      onClick={() => {
+                        setQuickPanel(null);
+                        setQuickPrompt("");
+                      }}
                       className="text-muted-foreground hover:text-foreground"
                       aria-label="Kapat"
                     >
@@ -793,12 +1036,19 @@ function Index() {
                           setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
                           generateImage(p);
                         } else {
-                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          setMessages((m) => [
+                            ...m,
+                            { role: "user", content: `🎬 ${p} (${dur}sn)` },
+                          ]);
                           generateVideo(p, dur);
                         }
                       }
                     }}
-                    placeholder={quickPanel === "image" ? "Ne çizmek istiyorsun? (ör: gün batımında dağ)" : "Nasıl bir video? (ör: sahilde koşan köpek)"}
+                    placeholder={
+                      quickPanel === "image"
+                        ? "Ne çizmek istiyorsun? (ör: gün batımında dağ)"
+                        : "Nasıl bir video? (ör: sahilde koşan köpek)"
+                    }
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
                   />
                   <div className="mt-2 flex items-center justify-between gap-2">
@@ -819,7 +1069,9 @@ function Index() {
                           10 sn
                         </button>
                       </div>
-                    ) : <span />}
+                    ) : (
+                      <span />
+                    )}
                     <button
                       type="button"
                       disabled={!quickPrompt.trim() || generatingImage || generatingVideo}
@@ -834,7 +1086,10 @@ function Index() {
                           setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
                           generateImage(p);
                         } else {
-                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          setMessages((m) => [
+                            ...m,
+                            { role: "user", content: `🎬 ${p} (${dur}sn)` },
+                          ]);
                           generateVideo(p, dur);
                         }
                       }}
@@ -851,13 +1106,23 @@ function Index() {
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <KeyRound size={15} className="text-brand" /> Kişisel AI ayarları
                     </div>
-                    <button type="button" onClick={() => setQuickPanel(null)} className="text-muted-foreground hover:text-foreground" aria-label="Kapat">
+                    <button
+                      type="button"
+                      onClick={() => setQuickPanel(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
                       <X size={14} />
                     </button>
                   </div>
                   <label className="mb-3 flex items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-xs text-secondary-foreground">
                     <span>Kendi API anahtarımı kullan</span>
-                    <input type="checkbox" checked={customAiEnabled} onChange={(e) => setCustomAiEnabled(e.target.checked)} className="h-4 w-4 accent-brand" />
+                    <input
+                      type="checkbox"
+                      checked={customAiEnabled}
+                      onChange={(e) => setCustomAiEnabled(e.target.checked)}
+                      className="h-4 w-4 accent-brand"
+                    />
                   </label>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <select
@@ -873,14 +1138,20 @@ function Index() {
                       onChange={(e) => setCustomAiModel(e.target.value)}
                       className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
                     >
-                      {CUSTOM_AI_MODELS[customAiProvider].map((model) => <option key={model} value={model}>{model}</option>)}
+                      {CUSTOM_AI_MODELS[customAiProvider].map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <input
                     type="password"
                     value={customAiKey}
                     onChange={(e) => setCustomAiKey(e.target.value)}
-                    placeholder={customAiProvider === "anthropic" ? "Anthropic API key" : "Poe API key"}
+                    placeholder={
+                      customAiProvider === "anthropic" ? "Anthropic API key" : "Poe API key"
+                    }
                     className="mt-2 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
                   />
                   {customAiProvider === "poe" && (
@@ -893,7 +1164,8 @@ function Index() {
                     />
                   )}
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Anahtar sadece bu tarayıcı oturumunda tutulur; mesajlar uygulama sunucusu üzerinden modele iletilir.
+                    Anahtar sadece bu tarayıcı oturumunda tutulur; mesajlar uygulama sunucusu
+                    üzerinden modele iletilir.
                   </p>
                 </div>
               )}
@@ -901,7 +1173,11 @@ function Index() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={user ? "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')" : "Mesaj göndermek için giriş yap…"}
+                placeholder={
+                  user
+                    ? "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')"
+                    : "Mesaj göndermek için giriş yap…"
+                }
                 className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
               />
               <div className="mt-3 flex items-center justify-between gap-3">
@@ -979,17 +1255,23 @@ function Index() {
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
-                              modelKey === m.label ? "bg-brand/15 text-brand" : "text-foreground hover:bg-accent"
+                              modelKey === m.label
+                                ? "bg-brand/15 text-brand"
+                                : "text-foreground hover:bg-accent"
                             } ${!m.available ? "cursor-not-allowed opacity-50" : ""}`}
                             title={m.description}
                           >
                             <div className="flex w-full items-center justify-between">
                               <span className="font-medium">{m.label}</span>
-                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{m.provider}</span>
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {m.provider}
+                              </span>
                             </div>
                             <span className="text-xs text-muted-foreground">{m.description}</span>
                             {!m.available && (
-                              <span className="mt-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">YAKINDA</span>
+                              <span className="mt-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                YAKINDA
+                              </span>
                             )}
                           </button>
                         ))}
@@ -999,7 +1281,9 @@ function Index() {
 
                   <button
                     type="button"
-                    onClick={() => sendMessage("Bana yardımcı olabileceğin tüm konuları kısaca anlat.")}
+                    onClick={() =>
+                      sendMessage("Bana yardımcı olabileceğin tüm konuları kısaca anlat.")
+                    }
                     className="hidden items-center gap-2 text-sm font-medium transition hover:text-foreground sm:inline-flex"
                   >
                     <span className="text-lg font-semibold">A</span>
@@ -1068,9 +1352,18 @@ function Index() {
 
       {/* About modal */}
       {aboutOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4" onClick={() => setAboutOpen(false)}>
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setAboutOpen(false)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-4"
+          onClick={() => setAboutOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setAboutOpen(false)}
+              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+            >
               <X size={18} />
             </button>
             <div className="flex items-center gap-3">
@@ -1078,8 +1371,9 @@ function Index() {
               <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              Sınırsız kodlama ve yaratıcılık asistanı. Birden fazla AI modeli destekler — Gemini ve GPT-5 ailelerinin tüm sürümleri ile çalışır.
-              Grok, Claude, Perplexity, DuckDuckGo, Llama ve Mistral yakında geliyor.
+              Sınırsız kodlama ve yaratıcılık asistanı. Birden fazla AI modeli destekler — Gemini ve
+              GPT-5 ailelerinin tüm sürümleri ile çalışır. Grok, Claude, Perplexity, DuckDuckGo,
+              Llama ve Mistral yakında geliyor.
             </p>
             <p className="mt-3 text-xs text-muted-foreground">v1.0 — © Kıvanç</p>
           </div>
