@@ -226,18 +226,18 @@ function Index() {
     }
   };
 
-  const generateVideo = async (prompt: string) => {
+  const generateVideo = async (prompt: string, duration: 5 | 10 = 5) => {
     setGeneratingVideo(true);
     setMessages((p) => [
       ...p,
-      { role: "assistant", content: "🎬 Video hazırlanıyor kanka, bu 30-90 saniye sürebilir..." },
+      { role: "assistant", content: `🎬 ${duration} saniyelik video hazırlanıyor kanka (Kling AI), bu 1-3 dk sürebilir...` },
     ]);
     try {
       const cleanPrompt = prompt.replace(/^\/video\s*/i, "");
       const resp = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: cleanPrompt }),
+        body: JSON.stringify({ prompt: cleanPrompt, duration }),
       });
       const data = await resp.json();
       if (!resp.ok || !data.video) {
