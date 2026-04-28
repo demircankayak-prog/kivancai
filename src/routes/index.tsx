@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import {
   FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
   Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
-  Paperclip, Image as ImageIcon, Loader2, Film,
+  Paperclip, Image as ImageIcon, Loader2, Film, Settings2, KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
@@ -20,6 +20,12 @@ type Msg = {
   attachments?: Attachment[];
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
+};
+type CustomAiProvider = "anthropic" | "poe";
+
+const CUSTOM_AI_MODELS = {
+  anthropic: ["claude-3-5-sonnet-latest", "claude-sonnet-4-5", "claude-opus-4-1"],
+  poe: ["Claude-3.5-Sonnet", "Claude-Sonnet-4.5", "Grok-4", "GPT-5", "Gemini-2.5-Pro"],
 };
 
 interface ModelOption {
