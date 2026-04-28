@@ -82,7 +82,12 @@ export const Route = createFileRoute("/api/custom-chat")({
 
             const content = Array.isArray(data?.content)
               ? data.content
-                  .map((p: any) => (p?.type === "text" ? p.text : ""))
+                  .map((p: unknown) => {
+                    if (p && typeof p === "object" && "type" in p && "text" in p) {
+                      return p.type === "text" && typeof p.text === "string" ? p.text : "";
+                    }
+                    return "";
+                  })
                   .join("\n")
                   .trim()
               : "";
