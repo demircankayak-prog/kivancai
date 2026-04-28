@@ -761,7 +761,7 @@ function Index() {
                 hidden
                 onChange={handleFileSelect}
               />
-              {quickPanel && (
+              {quickPanel && quickPanel !== "settings" && (
                 <div className="mb-3 rounded-xl border border-brand/40 bg-brand/5 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold text-brand">
@@ -843,6 +843,58 @@ function Index() {
                       Oluştur →
                     </button>
                   </div>
+                </div>
+              )}
+              {quickPanel === "settings" && (
+                <div className="mb-3 rounded-xl border border-border bg-background/80 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <KeyRound size={15} className="text-brand" /> Kişisel AI ayarları
+                    </div>
+                    <button type="button" onClick={() => setQuickPanel(null)} className="text-muted-foreground hover:text-foreground" aria-label="Kapat">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <label className="mb-3 flex items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+                    <span>Kendi API anahtarımı kullan</span>
+                    <input type="checkbox" checked={customAiEnabled} onChange={(e) => setCustomAiEnabled(e.target.checked)} className="h-4 w-4 accent-brand" />
+                  </label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <select
+                      value={customAiProvider}
+                      onChange={(e) => changeCustomProvider(e.target.value as CustomAiProvider)}
+                      className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                    >
+                      <option value="anthropic">Anthropic</option>
+                      <option value="poe">Poe.com</option>
+                    </select>
+                    <select
+                      value={customAiModel}
+                      onChange={(e) => setCustomAiModel(e.target.value)}
+                      className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                    >
+                      {CUSTOM_AI_MODELS[customAiProvider].map((model) => <option key={model} value={model}>{model}</option>)}
+                    </select>
+                  </div>
+                  <input
+                    type="password"
+                    value={customAiKey}
+                    onChange={(e) => setCustomAiKey(e.target.value)}
+                    placeholder={customAiProvider === "anthropic" ? "Anthropic API key" : "Poe API key"}
+                    className="mt-2 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                  />
+                  {customAiProvider === "poe" && (
+                    <input
+                      type="url"
+                      value={customAiEndpoint}
+                      onChange={(e) => setCustomAiEndpoint(e.target.value)}
+                      placeholder="Poe uyumlu API endpoint"
+                      className="mt-2 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                    />
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Anahtar sadece bu tarayıcı oturumunda tutulur; mesajlar uygulama sunucusu üzerinden modele iletilir.
+                  </p>
                 </div>
               )}
               <input
