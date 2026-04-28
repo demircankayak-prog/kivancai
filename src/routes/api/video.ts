@@ -5,7 +5,8 @@ export const Route = createFileRoute("/api/video")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { prompt } = await request.json();
+          const { prompt, duration } = await request.json();
+          const dur = duration === 10 ? 10 : 5;
           const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
           if (!REPLICATE_API_TOKEN) {
             return new Response(
@@ -18,9 +19,6 @@ export const Route = createFileRoute("/api/video")({
           }
 
           // Kling v1.6 Standard via Replicate (~$0.28 per 5s, supports 5 or 10s)
-          const { duration } = await (async () => ({ duration: 5 }))();
-          const reqBody = await request.clone().json().catch(() => ({}));
-          const dur = reqBody.duration === 10 ? 10 : 5;
           const createResp = await fetch("https://api.replicate.com/v1/models/kwaivgi/kling-v1.6-standard/predictions", {
             method: "POST",
             headers: {
