@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import {
   FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
   Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
-  Paperclip, Image as ImageIcon, Loader2,
+  Paperclip, Image as ImageIcon, Loader2, Film,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
@@ -76,6 +76,9 @@ function Index() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quickPanel, setQuickPanel] = useState<null | "image" | "video">(null);
+  const [quickPrompt, setQuickPrompt] = useState("");
+  const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
 
   const fileToDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -223,18 +226,18 @@ function Index() {
     }
   };
 
-  const generateVideo = async (prompt: string) => {
+  const generateVideo = async (prompt: string, duration: 5 | 10 = 5) => {
     setGeneratingVideo(true);
     setMessages((p) => [
       ...p,
-      { role: "assistant", content: "🎬 Video hazırlanıyor kanka, bu 30-90 saniye sürebilir..." },
+      { role: "assistant", content: `🎬 ${duration} saniyelik video hazırlanıyor kanka (Kling AI), bu 1-3 dk sürebilir...` },
     ]);
     try {
       const cleanPrompt = prompt.replace(/^\/video\s*/i, "");
       const resp = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: cleanPrompt }),
+        body: JSON.stringify({ prompt: cleanPrompt, duration }),
       });
       const data = await resp.json();
       if (!resp.ok || !data.video) {
@@ -707,6 +710,90 @@ function Index() {
                 hidden
                 onChange={handleFileSelect}
               />
+              {quickPanel && (
+                <div className="mb-3 rounded-xl border border-brand/40 bg-brand/5 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-brand">
+                      {quickPanel === "image" ? "🎨 Görsel oluştur" : "🎬 Video oluştur (Kling AI)"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setQuickPanel(null); setQuickPrompt(""); }}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={quickPrompt}
+                    onChange={(e) => setQuickPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && quickPrompt.trim()) {
+                        e.preventDefault();
+                        const p = quickPrompt.trim();
+                        const panel = quickPanel;
+                        const dur = videoDuration;
+                        setQuickPanel(null);
+                        setQuickPrompt("");
+                        if (panel === "image") {
+                          setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
+                          generateImage(p);
+                        } else {
+                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          generateVideo(p, dur);
+                        }
+                      }
+                    }}
+                    placeholder={quickPanel === "image" ? "Ne çizmek istiyorsun? (ör: gün batımında dağ)" : "Nasıl bir video? (ör: sahilde koşan köpek)"}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-brand"
+                  />
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    {quickPanel === "video" ? (
+                      <div className="flex items-center gap-1 rounded-md bg-background p-1">
+                        <button
+                          type="button"
+                          onClick={() => setVideoDuration(5)}
+                          className={`rounded px-2 py-1 text-xs font-medium transition ${videoDuration === 5 ? "bg-brand text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          5 sn
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVideoDuration(10)}
+                          className={`rounded px-2 py-1 text-xs font-medium transition ${videoDuration === 10 ? "bg-brand text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          10 sn
+                        </button>
+                      </div>
+                    ) : <span />}
+                    <button
+                      type="button"
+                      disabled={!quickPrompt.trim() || generatingImage || generatingVideo}
+                      onClick={() => {
+                        const p = quickPrompt.trim();
+                        if (!p) return;
+                        const panel = quickPanel;
+                        const dur = videoDuration;
+                        setQuickPanel(null);
+                        setQuickPrompt("");
+                        if (panel === "image") {
+                          setMessages((m) => [...m, { role: "user", content: `🎨 ${p}` }]);
+                          generateImage(p);
+                        } else {
+                          setMessages((m) => [...m, { role: "user", content: `🎬 ${p} (${dur}sn)` }]);
+                          generateVideo(p, dur);
+                        }
+                      }}
+                      className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                    >
+                      Oluştur →
+                    </button>
+                  </div>
+                </div>
+              )}
               <input
                 type="text"
                 value={input}
@@ -737,12 +824,27 @@ function Index() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInput((p) => p ? p : "Görsel oluştur: ")}
+                    onClick={() => {
+                      setQuickPanel((q) => (q === "image" ? null : "image"));
+                      setQuickPrompt("");
+                    }}
                     aria-label="Görsel oluştur"
                     title="Görsel oluştur"
-                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "image" ? "bg-accent text-foreground" : ""}`}
                   >
                     <ImageIcon size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickPanel((q) => (q === "video" ? null : "video"));
+                      setQuickPrompt("");
+                    }}
+                    aria-label="Video oluştur"
+                    title="Video oluştur (Kling AI)"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "video" ? "bg-accent text-foreground" : ""}`}
+                  >
+                    <Film size={18} />
                   </button>
 
                   {modelMenuOpen && (
