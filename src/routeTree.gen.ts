@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoRouteImport } from './routes/api/video'
 import { Route as ApiImageRouteImport } from './routes/api/image'
+import { Route as ApiCustomChatRouteImport } from './routes/api/custom-chat'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
 const AuthRoute = AuthRouteImport.update({
@@ -35,6 +36,11 @@ const ApiImageRoute = ApiImageRouteImport.update({
   path: '/api/image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCustomChatRoute = ApiCustomChatRouteImport.update({
+  id: '/api/custom-chat',
+  path: '/api/custom-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/video': typeof ApiVideoRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/video': typeof ApiVideoRoute
 }
@@ -60,21 +68,42 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/video': typeof ApiVideoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/api/chat' | '/api/image' | '/api/video'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/api/chat'
+    | '/api/custom-chat'
+    | '/api/image'
+    | '/api/video'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/api/chat' | '/api/image' | '/api/video'
-  id: '__root__' | '/' | '/auth' | '/api/chat' | '/api/image' | '/api/video'
+  to:
+    | '/'
+    | '/auth'
+    | '/api/chat'
+    | '/api/custom-chat'
+    | '/api/image'
+    | '/api/video'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/api/chat'
+    | '/api/custom-chat'
+    | '/api/image'
+    | '/api/video'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiCustomChatRoute: typeof ApiCustomChatRoute
   ApiImageRoute: typeof ApiImageRoute
   ApiVideoRoute: typeof ApiVideoRoute
 }
@@ -109,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/custom-chat': {
+      id: '/api/custom-chat'
+      path: '/api/custom-chat'
+      fullPath: '/api/custom-chat'
+      preLoaderRoute: typeof ApiCustomChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -123,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiCustomChatRoute: ApiCustomChatRoute,
   ApiImageRoute: ApiImageRoute,
   ApiVideoRoute: ApiVideoRoute,
 }
