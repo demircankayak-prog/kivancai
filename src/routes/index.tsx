@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import {
   FileText, Lightbulb, Menu, Mic, Palette, PenSquare, Plus,
   Search, Send, Sparkles, User, LogOut, Save, Info, X, Bookmark,
-  Paperclip, Image as ImageIcon, Loader2,
+  Paperclip, Image as ImageIcon, Loader2, Film,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
