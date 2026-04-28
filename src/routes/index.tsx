@@ -480,7 +480,9 @@ function Index() {
     if (stored)
       try {
         setSavedChats(JSON.parse(stored));
-      } catch {}
+      } catch {
+        setSavedChats([]);
+      }
   }, []);
 
   useEffect(() => {
@@ -683,7 +685,11 @@ function Index() {
   };
 
   const toggleMic = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const speechWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    };
+    const SR = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SR) {
       alert("Tarayıcınız ses tanımayı desteklemiyor.");
       return;
@@ -696,7 +702,7 @@ function Index() {
     const rec = new SR();
     rec.lang = "tr-TR";
     rec.interimResults = false;
-    rec.onresult = (e: any) => {
+    rec.onresult = (e) => {
       const t = e.results[0][0].transcript;
       setInput((prev) => (prev ? prev + " " + t : t));
     };
