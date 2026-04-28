@@ -41,6 +41,16 @@ type Msg = {
   generatedVideo?: string; // video url
 };
 type CustomAiProvider = "anthropic" | "poe";
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
 const CUSTOM_AI_MODELS = {
   anthropic: ["claude-3-5-sonnet-latest", "claude-sonnet-4-5", "claude-opus-4-1"],
@@ -207,7 +217,7 @@ function Index() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [aboutOpen, setAboutOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const [recording, setRecording] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
