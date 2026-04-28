@@ -365,6 +365,35 @@ function Index() {
         return { role: m.role, content: m.content };
       });
 
+      if (customAiEnabled) {
+        if (!customAiKey.trim()) {
+          setMessages((p) => [...p, { role: "assistant", content: "⚠️ Kişisel AI için önce artı menüsünden API anahtarını girmen gerekiyor." }]);
+          setStreaming(false);
+          return;
+        }
+
+        const resp = await fetch("/api/custom-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: customAiProvider,
+            apiKey: customAiKey.trim(),
+            model: customAiModel.trim(),
+            endpoint: customAiProvider === "poe" ? customAiEndpoint.trim() : undefined,
+            messages: apiMessages,
+          }),
+        });
+        const data = await resp.json().catch(() => ({ error: "Kişisel AI yanıtı okunamadı." }));
+        if (!resp.ok) {
+          setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${data.error || "Kişisel AI isteği başarısız oldu."}` }]);
+          setStreaming(false);
+          return;
+        }
+        setMessages((p) => [...p, { role: "assistant", content: data.content || "Yanıt boş döndü." }]);
+        setStreaming(false);
+        return;
+      }
+
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
