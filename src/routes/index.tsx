@@ -909,7 +909,10 @@ function Index() {
                   {/* Plus / Model picker */}
                   <button
                     type="button"
-                    onClick={() => setModelMenuOpen((o) => !o)}
+                    onClick={() => {
+                      setQuickPanel(null);
+                      setModelMenuOpen((o) => !o);
+                    }}
                     aria-label="Model seç"
                     title="AI modeli seç"
                     className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
@@ -928,8 +931,7 @@ function Index() {
                   <button
                     type="button"
                     onClick={() => {
-                      setQuickPanel((q) => (q === "image" ? null : "image"));
-                      setQuickPrompt("");
+                      openQuickPanel("image");
                     }}
                     aria-label="Görsel oluştur"
                     title="Görsel oluştur"
@@ -940,14 +942,22 @@ function Index() {
                   <button
                     type="button"
                     onClick={() => {
-                      setQuickPanel((q) => (q === "video" ? null : "video"));
-                      setQuickPrompt("");
+                      openQuickPanel("video");
                     }}
                     aria-label="Video oluştur"
                     title="Video oluştur (Kling AI)"
                     className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "video" ? "bg-accent text-foreground" : ""}`}
                   >
                     <Film size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openQuickPanel("settings")}
+                    aria-label="Kişisel AI ayarları"
+                    title="Poe/Anthropic API ayarları"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "settings" ? "bg-accent text-foreground" : ""}`}
+                  >
+                    <Settings2 size={18} />
                   </button>
 
                   {modelMenuOpen && (
