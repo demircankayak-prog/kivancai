@@ -740,12 +740,27 @@ function Index() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInput((p) => p ? p : "Görsel oluştur: ")}
+                    onClick={() => {
+                      setQuickPanel((q) => (q === "image" ? null : "image"));
+                      setQuickPrompt("");
+                    }}
                     aria-label="Görsel oluştur"
                     title="Görsel oluştur"
-                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "image" ? "bg-accent text-foreground" : ""}`}
                   >
                     <ImageIcon size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickPanel((q) => (q === "video" ? null : "video"));
+                      setQuickPrompt("");
+                    }}
+                    aria-label="Video oluştur"
+                    title="Video oluştur (Kling AI)"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground ${quickPanel === "video" ? "bg-accent text-foreground" : ""}`}
+                  >
+                    <Film size={18} />
                   </button>
 
                   {modelMenuOpen && (
