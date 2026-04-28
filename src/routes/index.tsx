@@ -962,8 +962,8 @@ function Index() {
 
                   {modelMenuOpen && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setModelMenuOpen(false)} />
-                      <div className="absolute bottom-12 left-0 z-20 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
+                      <div className="fixed inset-0 z-40" onClick={() => setModelMenuOpen(false)} />
+                      <div className="absolute bottom-12 left-0 z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
                         <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           AI Modelleri ({MODELS.length})
                         </p>
@@ -1000,7 +1000,7 @@ function Index() {
                   <button
                     type="button"
                     onClick={() => sendMessage("Bana yardımcı olabileceğin tüm konuları kısaca anlat.")}
-                    className="inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground"
+                    className="hidden items-center gap-2 text-sm font-medium transition hover:text-foreground sm:inline-flex"
                   >
                     <span className="text-lg font-semibold">A</span>
                     <span>Tools</span>
