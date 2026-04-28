@@ -76,6 +76,9 @@ function Index() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quickPanel, setQuickPanel] = useState<null | "image" | "video">(null);
+  const [quickPrompt, setQuickPrompt] = useState("");
+  const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
 
   const fileToDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
