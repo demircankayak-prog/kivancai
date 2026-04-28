@@ -82,9 +82,25 @@ function Index() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [quickPanel, setQuickPanel] = useState<null | "image" | "video">(null);
+  const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [quickPrompt, setQuickPrompt] = useState("");
   const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
+  const [customAiEnabled, setCustomAiEnabled] = useState(false);
+  const [customAiProvider, setCustomAiProvider] = useState<CustomAiProvider>("anthropic");
+  const [customAiKey, setCustomAiKey] = useState("");
+  const [customAiModel, setCustomAiModel] = useState(CUSTOM_AI_MODELS.anthropic[0]);
+  const [customAiEndpoint, setCustomAiEndpoint] = useState("https://api.poe.com/v1/chat/completions");
+
+  const openQuickPanel = (panel: "image" | "video" | "settings") => {
+    setModelMenuOpen(false);
+    setQuickPanel((q) => (q === panel ? null : panel));
+    setQuickPrompt("");
+  };
+
+  const changeCustomProvider = (provider: CustomAiProvider) => {
+    setCustomAiProvider(provider);
+    setCustomAiModel(CUSTOM_AI_MODELS[provider][0]);
+  };
 
   const fileToDataUrl = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
