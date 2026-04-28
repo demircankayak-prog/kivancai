@@ -7,15 +7,16 @@ export const Route = createFileRoute("/api/video")({
         try {
           const { prompt, duration } = await request.json();
           const dur = duration === 10 ? 10 : 5;
+          if (!prompt || typeof prompt !== "string") {
+            return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
+          }
+
           const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
           if (!REPLICATE_API_TOKEN) {
             return new Response(
-              JSON.stringify({ error: "Video üretimi için Replicate API key eklenmemiş. Sahibi ayarlardan eklemeli." }),
+              JSON.stringify({ error: "Kling AI için ücretsiz web hesabı otomatik bağlanamaz. 10 sn video üretimi için Replicate API key gerekir." }),
               { status: 500 }
             );
-          }
-          if (!prompt || typeof prompt !== "string") {
-            return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
           }
 
           // Kling v1.6 Standard via Replicate (~$0.28 per 5s, supports 5 or 10s)
