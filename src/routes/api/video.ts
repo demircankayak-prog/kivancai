@@ -17,9 +17,11 @@ export const Route = createFileRoute("/api/video")({
             return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
           }
 
-          // Predict using ByteDance SeedANCE (one of the cheapest text-to-video models)
-          // Model: bytedance/seedance-1-lite - ~$0.05 per 5s video
-          const createResp = await fetch("https://api.replicate.com/v1/models/bytedance/seedance-1-lite/predictions", {
+          // Kling v1.6 Standard via Replicate (~$0.28 per 5s, supports 5 or 10s)
+          const { duration } = await (async () => ({ duration: 5 }))();
+          const reqBody = await request.clone().json().catch(() => ({}));
+          const dur = reqBody.duration === 10 ? 10 : 5;
+          const createResp = await fetch("https://api.replicate.com/v1/models/kwaivgi/kling-v1.6-standard/predictions", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
@@ -29,10 +31,10 @@ export const Route = createFileRoute("/api/video")({
             body: JSON.stringify({
               input: {
                 prompt: prompt,
-                duration: 5,
-                resolution: "480p",
+                duration: dur,
                 aspect_ratio: "16:9",
-                fps: 24,
+                cfg_scale: 0.5,
+                negative_prompt: "",
               },
             }),
           });
