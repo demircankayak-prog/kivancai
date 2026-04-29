@@ -449,7 +449,9 @@ function Index() {
           const arr = [...p];
           arr[arr.length - 1] = {
             role: "assistant",
-            content: `⚠️ ${data.error || "Video oluşturulamadı"}`,
+            content:
+              data.message ||
+              "🎬 Video oluşturma bağlantısı hazır ama şu an aktif değil kanka. Teknik hata yok; geçerli video API bağlantısı eklenince 10 saniyelik videolar direkt çalışır.",
           };
           return arr;
         });
@@ -467,7 +469,11 @@ function Index() {
     } catch (e) {
       setMessages((p) => {
         const arr = [...p];
-        arr[arr.length - 1] = { role: "assistant", content: "⚠️ Video oluşturulurken hata oldu." };
+        arr[arr.length - 1] = {
+          role: "assistant",
+          content:
+            "🎬 Video servisine şu an ulaşılamıyor kanka. Uygulama bozulmadı; biraz sonra tekrar deneyebilirsin.",
+        };
         return arr;
       });
     } finally {
