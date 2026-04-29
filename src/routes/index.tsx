@@ -889,8 +889,9 @@ function Index() {
               <img src={logoImg} alt="" className="h-7 w-7 rounded-md object-contain" />
               <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
-            <div className="hidden md:block text-xs text-muted-foreground">
-              {selectedModel.label}
+            <div className="hidden items-center gap-2 text-xs font-semibold text-muted-foreground md:flex">
+              <img src={logoImg} alt="KıvançAI" className="h-6 w-6 rounded-full object-cover" />
+              KıvançAI
             </div>
 
             <div className="flex items-center gap-3">
@@ -947,9 +948,11 @@ function Index() {
                     className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {m.role === "assistant" && (
-                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
-                        <Sparkles size={16} />
-                      </div>
+                      <img
+                        src={logoImg}
+                        alt="KıvançAI"
+                        className="h-8 w-8 shrink-0 rounded-full border border-border object-cover"
+                      />
                     )}
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
