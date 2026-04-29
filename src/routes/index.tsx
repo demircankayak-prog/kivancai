@@ -813,7 +813,7 @@ function Index() {
               <img
                 src={logoImg}
                 alt="Kıvanç AI"
-                className="h-9 w-9 rounded-lg object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+                className="h-9 w-9 rounded-full object-cover"
               />
             </div>
 
@@ -885,7 +885,7 @@ function Index() {
               <button onClick={() => setSidebarOpen((o) => !o)}>
                 <Menu size={20} />
               </button>
-              <img src={logoImg} alt="" className="h-7 w-7 rounded-md object-contain" />
+              <img src={logoImg} alt="" className="h-7 w-7 rounded-full object-cover" />
               <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
             <div className="hidden items-center gap-2 text-xs font-semibold text-muted-foreground md:flex">
@@ -1505,7 +1505,7 @@ function Index() {
               <X size={18} />
             </button>
             <div className="flex items-center gap-3">
-              <img src={logoImg} alt="" className="h-9 w-9 rounded-lg object-contain" />
+              <img src={logoImg} alt="" className="h-9 w-9 rounded-full object-cover" />
               <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
