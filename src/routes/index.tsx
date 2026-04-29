@@ -1352,7 +1352,7 @@ function Index() {
                     className="hidden items-center gap-2 text-sm font-medium transition hover:text-foreground sm:inline-flex"
                   >
                     <span className="text-lg font-semibold">A</span>
-                    <span>Tools</span>
+                    <span>Araçlar</span>
                   </button>
                 </div>
 
@@ -1436,9 +1436,8 @@ function Index() {
               <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              Sınırsız kodlama ve yaratıcılık asistanı. Birden fazla AI modeli destekler — Gemini ve
-              GPT-5 ailelerinin tüm sürümleri ile çalışır. Grok, Claude, Perplexity, DuckDuckGo,
-              Llama ve Mistral yakında geliyor.
+              Sınırsız kodlama ve yaratıcılık asistanı. Sohbet, görsel üretimi, video alanı ve
+              kişisel AI bağlantıları için hazırlanmış sade KıvançAI deneyimi.
             </p>
             <p className="mt-3 text-xs text-muted-foreground">v1.0 — © Kıvanç</p>
           </div>
