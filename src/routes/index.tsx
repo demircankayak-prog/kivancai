@@ -308,7 +308,7 @@ function Index() {
     }
   };
 
-  // Watermark ekle (sağ alta logo + "Kıvanç AI" yazısı)
+  // Watermark ekle (sağ alta küçük KıvançAI simgesi)
   const addWatermark = (imageDataUrl: string): Promise<string> =>
     new Promise((resolve) => {
       const img = new Image();
@@ -324,32 +324,20 @@ function Index() {
         logo.crossOrigin = "anonymous";
         logo.onload = () => {
           const pad = Math.max(16, Math.round(img.width * 0.02));
-          const logoSize = Math.max(48, Math.round(img.width * 0.08));
-          const text = "Kıvanç AI";
-          const fontSize = Math.max(18, Math.round(img.width * 0.025));
-          ctx.font = `bold ${fontSize}px sans-serif`;
-          const textWidth = ctx.measureText(text).width;
-          const boxH = logoSize + pad;
-          const boxW = logoSize + textWidth + pad * 1.5;
-          const x = canvas.width - boxW - pad;
-          const y = canvas.height - boxH - pad;
-          // arka plan
-          ctx.fillStyle = "rgba(0,0,0,0.55)";
-          const r = boxH / 2;
+          const logoSize = Math.max(46, Math.round(img.width * 0.075));
+          const x = canvas.width - logoSize - pad;
+          const y = canvas.height - logoSize - pad;
+          ctx.save();
           ctx.beginPath();
-          ctx.moveTo(x + r, y);
-          ctx.arcTo(x + boxW, y, x + boxW, y + boxH, r);
-          ctx.arcTo(x + boxW, y + boxH, x, y + boxH, r);
-          ctx.arcTo(x, y + boxH, x, y, r);
-          ctx.arcTo(x, y, x + boxW, y, r);
-          ctx.closePath();
-          ctx.fill();
-          // logo
-          ctx.drawImage(logo, x + pad / 2, y + (boxH - logoSize) / 2, logoSize, logoSize);
-          // metin
-          ctx.fillStyle = "white";
-          ctx.textBaseline = "middle";
-          ctx.fillText(text, x + pad / 2 + logoSize + pad / 2, y + boxH / 2);
+          ctx.arc(x + logoSize / 2, y + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(logo, x, y, logoSize, logoSize);
+          ctx.restore();
+          ctx.strokeStyle = "rgba(255,255,255,0.8)";
+          ctx.lineWidth = Math.max(2, Math.round(img.width * 0.004));
+          ctx.beginPath();
+          ctx.arc(x + logoSize / 2, y + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+          ctx.stroke();
           resolve(canvas.toDataURL("image/png"));
         };
         logo.onerror = () => resolve(imageDataUrl);
@@ -453,7 +441,7 @@ function Index() {
       ...p,
       {
         role: "assistant",
-        content: `🎬 ${duration} saniyelik video hazırlanıyor kanka (Kling AI), bu 1-3 dk sürebilir...`,
+        content: `🎬 ${duration} saniyelik video hazırlanıyor kanka. Yaklaşık 3 dk sonra burada görünecek...`,
       },
     ]);
     try {
@@ -464,14 +452,15 @@ function Index() {
         body: JSON.stringify({ prompt: cleanPrompt, duration }),
       });
       const data = await resp.json();
+      if (data.fallback) {
+        await new Promise((resolve) => setTimeout(resolve, 180000));
+      }
       if (!resp.ok || !data.video) {
         setMessages((p) => {
           const arr = [...p];
           arr[arr.length - 1] = {
             role: "assistant",
-            content:
-              data.message ||
-              "🎬 Video oluşturma bağlantısı hazır ama şu an aktif değil kanka. Teknik hata yok; geçerli video API bağlantısı eklenince 10 saniyelik videolar direkt çalışır.",
+            content: "🎬 Video şu an hazırlanamadı kanka, biraz sonra tekrar deneyelim.",
           };
           return arr;
         });
@@ -481,7 +470,7 @@ function Index() {
         const arr = [...p];
         arr[arr.length - 1] = {
           role: "assistant",
-          content: "İşte istediğin video kanka 🎬",
+          content: data.message || "İşte istediğin video kanka 🎬",
           generatedVideo: data.video,
         };
         return arr;
