@@ -782,16 +782,26 @@ function Index() {
               <Info size={18} />
             </button>
           </div>
-          {user && (
+          <div className="flex flex-col items-center gap-4">
             <button
-              onClick={signOut}
-              aria-label="Çıkış"
-              title="Çıkış yap"
-              className="text-muted-foreground transition hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Ayarlar"
+              title="Ayarlar"
+              className="grid h-9 w-9 place-items-center rounded-full border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
             >
-              <LogOut size={18} />
+              <Settings2 size={18} />
             </button>
-          )}
+            {user && (
+              <button
+                onClick={signOut}
+                aria-label="Çıkış"
+                title="Çıkış yap"
+                className="text-muted-foreground transition hover:text-foreground"
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
         </aside>
 
         {/* Geniş sidebar */}
@@ -852,12 +862,20 @@ function Index() {
               )}
             </div>
 
-            <button
-              onClick={() => setAboutOpen(true)}
-              className="mt-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-            >
-              <Info size={13} /> Hakkında
-            </button>
+            <div className="mt-3 space-y-1">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Settings2 size={13} /> Ayarlar
+              </button>
+              <button
+                onClick={() => setAboutOpen(true)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                <Info size={13} /> Hakkında
+              </button>
+            </div>
           </aside>
         )}
 
