@@ -24,9 +24,18 @@ import {
   Film,
   Settings2,
   KeyRound,
+  Bell,
+  Bot,
+  Brush,
+  Globe2,
+  HelpCircle,
+  Link2,
+  MessageSquare,
+  NotebookTabs,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/kivancai-logo-circle.png";
 
 export const Route = createFileRoute("/")({
   component: Index,
