@@ -1,5 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+const unavailableVideoResponse = (message?: string) =>
+  Response.json({
+    video: null,
+    message:
+      message ||
+      "Kling AI'nin ücretsiz web sürümü uygulama içinden otomatik kullanılamıyor. 10 saniyelik video için API bağlantısı hazır; geçerli bir video API anahtarı eklenince direkt çalışır.",
+  });
+
 export const Route = createFileRoute("/api/video")({
   server: {
     handlers: {
@@ -13,13 +21,7 @@ export const Route = createFileRoute("/api/video")({
 
           const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
           if (!REPLICATE_API_TOKEN) {
-            return new Response(
-              JSON.stringify({
-                error:
-                  "Kling AI için ücretsiz web hesabı otomatik bağlanamaz. 10 sn video üretimi için Replicate API key gerekir.",
-              }),
-              { status: 500 },
-            );
+            return unavailableVideoResponse();
           }
 
           // Kling v1.6 Standard via Replicate (~$0.28 per 5s, supports 5 or 10s)
@@ -47,12 +49,12 @@ export const Route = createFileRoute("/api/video")({
           if (!createResp.ok) {
             const t = await createResp.text();
             console.error("Replicate error:", createResp.status, t);
-            return new Response(
-              JSON.stringify({
-                error: `Video oluşturulamadı (${createResp.status}). Replicate hesabında kredi var mı kontrol et.`,
-              }),
-              { status: 500 },
-            );
+            if (createResp.status === 401 || createResp.status === 402 || createResp.status === 403) {
+              return unavailableVideoResponse(
+                "Video bağlantısı şu an aktif değil. Kullanıcıya teknik hata göstermeden devam edebilirsin; geçerli API anahtarı eklenince 10 saniyelik Kling video üretimi çalışır.",
+              );
+            }
+            return unavailableVideoResponse("Video servisi şu an yoğun. Biraz sonra tekrar dene kanka.");
           }
 
           let prediction = await createResp.json();
@@ -81,17 +83,14 @@ export const Route = createFileRoute("/api/video")({
           }
 
           if (prediction.status !== "succeeded") {
-            return new Response(
-              JSON.stringify({ error: prediction.error || "Video üretimi başarısız oldu" }),
-              { status: 500 },
-            );
+            return unavailableVideoResponse("Video servisi şu an tamamlayamadı. Biraz sonra tekrar dene kanka.");
           }
 
           const videoUrl = Array.isArray(prediction.output)
             ? prediction.output[0]
             : prediction.output;
           if (!videoUrl) {
-            return new Response(JSON.stringify({ error: "Video URL'si dönmedi" }), { status: 500 });
+            return unavailableVideoResponse("Video servisi URL döndürmedi. Biraz sonra tekrar dene kanka.");
           }
 
           return Response.json({ video: videoUrl });
