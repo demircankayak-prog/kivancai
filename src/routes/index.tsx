@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Send,
-  Sparkles,
   User,
   LogOut,
   Save,
@@ -24,9 +23,18 @@ import {
   Film,
   Settings2,
   KeyRound,
+  Bell,
+  Bot,
+  Brush,
+  Globe2,
+  HelpCircle,
+  Link2,
+  MessageSquare,
+  NotebookTabs,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/kivancai-logo-circle.png";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -202,6 +210,17 @@ const promptActions = [
   },
 ];
 
+const SETTINGS_ITEMS = [
+  { label: "Etkinlik", icon: Bell, detail: "Sohbet ve kullanım geçmişi" },
+  { label: "Tema", icon: Brush, detail: "Koyu minimal arayüz" },
+  { label: "KıvançAI için talimatlar", icon: Bot, detail: "Asistan davranışı" },
+  { label: "Bağlı uygulamalar", icon: Link2, detail: "Poe, Anthropic ve diğerleri" },
+  { label: "Herkese açık bağlantılarınız", icon: Globe2, detail: "Paylaşılan linkler" },
+  { label: "NotebookLM", icon: NotebookTabs, detail: "Not ve kaynak alanı" },
+  { label: "Geri bildirim gönder", icon: MessageSquare, detail: "Öneri ve hata bildirimi" },
+  { label: "Yardım", icon: HelpCircle, detail: "Destek merkezi" },
+];
+
 function Index() {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
@@ -224,6 +243,7 @@ function Index() {
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState("");
   const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
   const [customAiEnabled, setCustomAiEnabled] = useState(false);
@@ -721,6 +741,7 @@ function Index() {
 
   const initials = (profile?.display_name || user?.email || "U").slice(0, 1).toUpperCase();
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Misafir";
+  const ipAddress = "192.168.1.24";
 
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
@@ -760,16 +781,26 @@ function Index() {
               <Info size={18} />
             </button>
           </div>
-          {user && (
+          <div className="flex flex-col items-center gap-4">
             <button
-              onClick={signOut}
-              aria-label="Çıkış"
-              title="Çıkış yap"
-              className="text-muted-foreground transition hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Ayarlar"
+              title="Ayarlar"
+              className="grid h-9 w-9 place-items-center rounded-full border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground shadow-[var(--shadow-control)] transition hover:bg-accent"
             >
-              <LogOut size={18} />
+              <Settings2 size={18} />
             </button>
-          )}
+            {user && (
+              <button
+                onClick={signOut}
+                aria-label="Çıkış"
+                title="Çıkış yap"
+                className="text-muted-foreground transition hover:text-foreground"
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
         </aside>
 
         {/* Geniş sidebar */}
@@ -782,7 +813,7 @@ function Index() {
               <img
                 src={logoImg}
                 alt="Kıvanç AI"
-                className="h-9 w-9 rounded-lg object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+                className="h-9 w-9 rounded-full object-cover"
               />
             </div>
 
@@ -830,12 +861,20 @@ function Index() {
               )}
             </div>
 
-            <button
-              onClick={() => setAboutOpen(true)}
-              className="mt-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
-            >
-              <Info size={13} /> Hakkında
-            </button>
+            <div className="mt-3 space-y-1">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Settings2 size={13} /> Ayarlar
+              </button>
+              <button
+                onClick={() => setAboutOpen(true)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                <Info size={13} /> Hakkında
+              </button>
+            </div>
           </aside>
         )}
 
@@ -846,11 +885,12 @@ function Index() {
               <button onClick={() => setSidebarOpen((o) => !o)}>
                 <Menu size={20} />
               </button>
-              <img src={logoImg} alt="" className="h-7 w-7 rounded-md object-contain" />
+              <img src={logoImg} alt="" className="h-7 w-7 rounded-full object-cover" />
               <p className="text-sm font-bold">Kıvanç AI</p>
             </div>
-            <div className="hidden md:block text-xs text-muted-foreground">
-              {selectedModel.label}
+            <div className="hidden items-center gap-2 text-xs font-semibold text-muted-foreground md:flex">
+              <img src={logoImg} alt="KıvançAI" className="h-6 w-6 rounded-full object-cover" />
+              KıvançAI
             </div>
 
             <div className="flex items-center gap-3">
@@ -907,9 +947,11 @@ function Index() {
                     className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {m.role === "assistant" && (
-                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
-                        <Sparkles size={16} />
-                      </div>
+                      <img
+                        src={logoImg}
+                        alt="KıvançAI"
+                        className="h-8 w-8 shrink-0 rounded-full border border-border object-cover"
+                      />
                     )}
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
@@ -1309,7 +1351,7 @@ function Index() {
                     className="hidden items-center gap-2 text-sm font-medium transition hover:text-foreground sm:inline-flex"
                   >
                     <span className="text-lg font-semibold">A</span>
-                    <span>Tools</span>
+                    <span>Araçlar</span>
                   </button>
                 </div>
 
@@ -1372,6 +1414,80 @@ function Index() {
         </section>
       </div>
 
+      {/* Settings modal */}
+      {settingsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-background/70 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
+          onClick={() => setSettingsOpen(false)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex items-center gap-3">
+                <img src={logoImg} alt="KıvançAI" className="h-10 w-10 rounded-full object-cover" />
+                <div>
+                  <h3 className="text-base font-bold text-popover-foreground">Ayarlar</h3>
+                  <p className="text-xs text-muted-foreground">KıvançAI kontrol merkezi</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                aria-label="Ayarları kapat"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-2">
+              {SETTINGS_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-accent"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-brand">
+                      <Icon size={17} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-popover-foreground">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.detail}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+              <div className="mx-3 my-2 border-t border-border" />
+              <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-secondary px-3 py-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-background text-brand">
+                  <Shield size={17} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-secondary-foreground">IP adresiniz</p>
+                  <p className="truncate text-xs text-muted-foreground">{ipAddress}</p>
+                </div>
+              </div>
+              {user && (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="mx-3 mb-3 flex w-[calc(100%-1.5rem)] items-center justify-center gap-2 rounded-xl bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90"
+                >
+                  <LogOut size={16} /> Çıkış yap
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* About modal */}
       {aboutOpen && (
         <div
@@ -1389,13 +1505,12 @@ function Index() {
               <X size={18} />
             </button>
             <div className="flex items-center gap-3">
-              <img src={logoImg} alt="" className="h-9 w-9 rounded-lg object-contain" />
+              <img src={logoImg} alt="" className="h-9 w-9 rounded-full object-cover" />
               <h3 className="font-serif text-xl font-bold">Kıvanç AI Hakkında</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              Sınırsız kodlama ve yaratıcılık asistanı. Birden fazla AI modeli destekler — Gemini ve
-              GPT-5 ailelerinin tüm sürümleri ile çalışır. Grok, Claude, Perplexity, DuckDuckGo,
-              Llama ve Mistral yakında geliyor.
+              Sınırsız kodlama ve yaratıcılık asistanı. Sohbet, görsel üretimi, video alanı ve
+              kişisel AI bağlantıları için hazırlanmış sade KıvançAI deneyimi.
             </p>
             <p className="mt-3 text-xs text-muted-foreground">v1.0 — © Kıvanç</p>
           </div>

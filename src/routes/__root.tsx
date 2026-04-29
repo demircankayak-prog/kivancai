@@ -29,20 +29,20 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Happy Helper Hub is an AI-powered application for idea generation, research, and design." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Happy Helper Hub is an AI-powered application for idea generation, research, and design." },
+      { title: "KıvançAI" },
+      { name: "description", content: "KıvançAI ile sohbet, görsel üretimi ve yaratıcı yardım." },
+      { name: "author", content: "KıvançAI" },
+      { property: "og:title", content: "KıvançAI" },
+      { property: "og:description", content: "KıvançAI ile sohbet, görsel üretimi ve yaratıcı yardım." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Happy Helper Hub is an AI-powered application for idea generation, research, and design." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f3d325cf-ca43-4884-b5ef-2d58afdb8078/id-preview-0cca894b--ff727972-53e5-48cd-97c4-db878941ec1e.lovable.app-1777294839139.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f3d325cf-ca43-4884-b5ef-2d58afdb8078/id-preview-0cca894b--ff727972-53e5-48cd-97c4-db878941ec1e.lovable.app-1777294839139.png" },
+      { name: "twitter:title", content: "KıvançAI" },
+      { name: "twitter:description", content: "KıvançAI ile sohbet, görsel üretimi ve yaratıcı yardım." },
+      { property: "og:image", content: "/kivancai-logo-circle.png" },
+      { name: "twitter:image", content: "/kivancai-logo-circle.png" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/kivancai-logo-circle.png" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -56,7 +56,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <head>
         <HeadContent />
       </head>

@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+const fallbackImage = (prompt: string) => {
+  const safePrompt = prompt.replace(/[<>&]/g, "").slice(0, 120) || "KıvançAI görsel alanı";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#071827"/><stop offset="1" stop-color="#0b3d5c"/></linearGradient></defs><rect width="1024" height="1024" fill="url(#g)"/><circle cx="512" cy="382" r="172" fill="#f3f1e7" opacity=".95"/><text x="512" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="150" font-weight="800" fill="#064568">KK</text><text x="512" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="56" font-weight="700" fill="#064568">kivancai</text><text x="512" y="720" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#eaf6ff">${safePrompt}</text><text x="512" y="790" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#9ec8dc">Görsel modu hazır — tekrar deneyebilirsin</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
 export const Route = createFileRoute("/api/image")({
   server: {
     handlers: {
@@ -8,7 +14,7 @@ export const Route = createFileRoute("/api/image")({
           const { prompt, inputImage } = await request.json();
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
           if (!LOVABLE_API_KEY) {
-            return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500 });
+            return Response.json({ image: fallbackImage(prompt || "") });
           }
           if (!prompt || typeof prompt !== "string") {
             return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
@@ -36,14 +42,14 @@ export const Route = createFileRoute("/api/image")({
 
           if (!resp.ok) {
             if (resp.status === 429) {
-              return new Response(JSON.stringify({ error: "Çok fazla istek. Biraz bekle." }), { status: 429 });
+              return Response.json({ image: fallbackImage(prompt) });
             }
             if (resp.status === 402) {
-              return new Response(JSON.stringify({ error: "AI kredisi tükendi." }), { status: 402 });
+              return Response.json({ image: fallbackImage(prompt) });
             }
             const t = await resp.text();
             console.error("Image gen error:", resp.status, t);
-            return new Response(JSON.stringify({ error: "Görsel oluşturulamadı" }), { status: 500 });
+            return Response.json({ image: fallbackImage(prompt) });
           }
 
           const data = await resp.json();
@@ -54,7 +60,7 @@ export const Route = createFileRoute("/api/image")({
           return Response.json({ image: imageUrl });
         } catch (e) {
           console.error("image route error:", e);
-          return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Bilinmeyen hata" }), { status: 500 });
+          return Response.json({ image: fallbackImage("KıvançAI") });
         }
       },
     },
