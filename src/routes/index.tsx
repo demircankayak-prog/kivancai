@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Send,
-  Sparkles,
   User,
   LogOut,
   Save,
