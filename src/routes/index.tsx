@@ -211,6 +211,17 @@ const promptActions = [
   },
 ];
 
+const SETTINGS_ITEMS = [
+  { label: "Etkinlik", icon: Bell, detail: "Sohbet ve kullanım geçmişi" },
+  { label: "Tema", icon: Brush, detail: "Koyu minimal arayüz" },
+  { label: "KıvançAI için talimatlar", icon: Bot, detail: "Asistan davranışı" },
+  { label: "Bağlı uygulamalar", icon: Link2, detail: "Poe, Anthropic ve diğerleri" },
+  { label: "Herkese açık bağlantılarınız", icon: Globe2, detail: "Paylaşılan linkler" },
+  { label: "NotebookLM", icon: NotebookTabs, detail: "Not ve kaynak alanı" },
+  { label: "Geri bildirim gönder", icon: MessageSquare, detail: "Öneri ve hata bildirimi" },
+  { label: "Yardım", icon: HelpCircle, detail: "Destek merkezi" },
+];
+
 function Index() {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
@@ -233,6 +244,7 @@ function Index() {
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState("");
   const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
   const [customAiEnabled, setCustomAiEnabled] = useState(false);
