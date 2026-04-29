@@ -742,6 +742,7 @@ function Index() {
 
   const initials = (profile?.display_name || user?.email || "U").slice(0, 1).toUpperCase();
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Misafir";
+  const ipAddress = "192.168.1.24";
 
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
