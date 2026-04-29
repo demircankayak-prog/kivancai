@@ -1414,6 +1414,80 @@ function Index() {
         </section>
       </div>
 
+      {/* Settings modal */}
+      {settingsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-background/70 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
+          onClick={() => setSettingsOpen(false)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex items-center gap-3">
+                <img src={logoImg} alt="KıvançAI" className="h-10 w-10 rounded-full object-cover" />
+                <div>
+                  <h3 className="text-base font-bold text-popover-foreground">Ayarlar</h3>
+                  <p className="text-xs text-muted-foreground">KıvançAI kontrol merkezi</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                aria-label="Ayarları kapat"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-2">
+              {SETTINGS_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-accent"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-brand">
+                      <Icon size={17} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-popover-foreground">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.detail}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+              <div className="mx-3 my-2 border-t border-border" />
+              <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-secondary px-3 py-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-background text-brand">
+                  <Shield size={17} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-secondary-foreground">IP adresiniz</p>
+                  <p className="truncate text-xs text-muted-foreground">{ipAddress}</p>
+                </div>
+              </div>
+              {user && (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="mx-3 mb-3 flex w-[calc(100%-1.5rem)] items-center justify-center gap-2 rounded-xl bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90"
+                >
+                  <LogOut size={16} /> Çıkış yap
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* About modal */}
       {aboutOpen && (
         <div
