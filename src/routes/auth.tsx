@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/kivancai-logo-circle.png";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -94,7 +94,7 @@ function AuthPage() {
           <img
             src={logoImg}
             alt="Kıvanç AI"
-            className="h-9 w-9 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+            className="h-9 w-9 rounded-full object-cover"
           />
           <h1 className="font-serif text-2xl font-bold">Kıvanç AI</h1>
         </div>
