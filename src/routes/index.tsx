@@ -47,6 +47,7 @@ type Msg = {
   attachments?: Attachment[];
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
+  videoWatermark?: boolean; // ilk videoda false, sonrakilerde true
 };
 type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
