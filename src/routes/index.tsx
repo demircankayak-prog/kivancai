@@ -1552,6 +1552,18 @@ function Index() {
                     <Mic size={18} />
                   </button>
                   <button
+                    type="button"
+                    onClick={() => {
+                      setVoiceLiveOpen(true);
+                      setTimeout(() => startVoiceListen(), 250);
+                    }}
+                    aria-label="Canlı sesli sohbet"
+                    title="Canlı sesli sohbet (yapay zeka ile konuş)"
+                    className="transition hover:text-foreground"
+                  >
+                    <AudioLines size={20} />
+                  </button>
+                  <button
                     type="submit"
                     disabled={streaming || !input.trim()}
                     aria-label="Gönder"
