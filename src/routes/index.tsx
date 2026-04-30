@@ -32,6 +32,9 @@ import {
   MessageSquare,
   NotebookTabs,
   Shield,
+  AudioLines,
+  MonitorUp,
+  PhoneOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/kivancai-logo-circle.png";
@@ -243,6 +246,15 @@ function Index() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
+  const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceReply, setVoiceReply] = useState("");
+  const [screenSharing, setScreenSharing] = useState(false);
+  const voiceRecogRef = useRef<BrowserSpeechRecognition | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -492,6 +504,169 @@ function Index() {
     } finally {
       setGeneratingVideo(false);
     }
+  };
+
+  // ===== Canlı sesli sohbet (Web Speech + Lovable AI + TTS) =====
+  const speakReply = (text: string) => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "tr-TR";
+      utter.rate = 1.05;
+      utter.pitch = 1;
+      const voices = synth.getVoices();
+      const tr = voices.find((v) => v.lang?.toLowerCase().startsWith("tr"));
+      if (tr) utter.voice = tr;
+      utter.onstart = () => setVoiceSpeaking(true);
+      utter.onend = () => setVoiceSpeaking(false);
+      utter.onerror = () => setVoiceSpeaking(false);
+      synth.speak(utter);
+    } catch (e) {
+      console.error("TTS error:", e);
+    }
+  };
+
+  const askLiveAI = async (userText: string) => {
+    setVoiceTranscript(userText);
+    setVoiceReply("…");
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: `Sesli konuşma modundayım, kısa ve doğal cevap ver (1-3 cümle). Soru: ${userText}`,
+            },
+          ],
+        }),
+      });
+      if (!resp.ok || !resp.body) {
+        const fb = "Kanka şu an cevap veremedim, tekrar dener misin?";
+        setVoiceReply(fb);
+        speakReply(fb);
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content as string | undefined;
+            if (c) {
+              full += c;
+              setVoiceReply(full);
+            }
+          } catch {
+            buf = line + "\n" + buf;
+            break;
+          }
+        }
+      }
+      const reply = full.trim() || "Tamamdır kanka.";
+      speakReply(reply);
+    } catch (e) {
+      console.error("live AI error:", e);
+      const fb = "Bağlantıda küçük bir sorun oldu kanka, tekrar dener misin?";
+      setVoiceReply(fb);
+      speakReply(fb);
+    }
+  };
+
+  const startVoiceListen = () => {
+    const SR =
+      (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognition }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition;
+    if (!SR) {
+      alert("Tarayıcın canlı ses tanımayı desteklemiyor. Chrome'u dene kanka.");
+      return;
+    }
+    try {
+      window.speechSynthesis?.cancel();
+      const rec = new SR();
+      rec.lang = "tr-TR";
+      rec.interimResults = false;
+      rec.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map((r) => r[0].transcript)
+          .join(" ")
+          .trim();
+        if (transcript) askLiveAI(transcript);
+      };
+      rec.onend = () => setVoiceListening(false);
+      rec.start();
+      voiceRecogRef.current = rec;
+      setVoiceListening(true);
+    } catch (e) {
+      console.error("voice listen error:", e);
+      setVoiceListening(false);
+    }
+  };
+
+  const stopVoiceListen = () => {
+    try {
+      voiceRecogRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    setVoiceListening(false);
+  };
+
+  const toggleScreenShare = async () => {
+    if (screenSharing) {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+      if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+      setScreenSharing(false);
+      return;
+    }
+    try {
+      const stream = await (navigator.mediaDevices as MediaDevices & {
+        getDisplayMedia: (c: { video: boolean; audio: boolean }) => Promise<MediaStream>;
+      }).getDisplayMedia({ video: true, audio: false });
+      screenStreamRef.current = stream;
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = stream;
+        screenVideoRef.current.play().catch(() => undefined);
+      }
+      stream.getVideoTracks()[0].onended = () => {
+        setScreenSharing(false);
+        screenStreamRef.current = null;
+      };
+      setScreenSharing(true);
+    } catch (e) {
+      console.error("screen share error:", e);
+    }
+  };
+
+  const closeVoiceLive = () => {
+    stopVoiceListen();
+    window.speechSynthesis?.cancel();
+    if (screenSharing) {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+      setScreenSharing(false);
+    }
+    setVoiceLiveOpen(false);
+    setVoiceTranscript("");
+    setVoiceReply("");
+    setVoiceSpeaking(false);
   };
 
   useEffect(() => {
@@ -1377,6 +1552,18 @@ function Index() {
                     <Mic size={18} />
                   </button>
                   <button
+                    type="button"
+                    onClick={() => {
+                      setVoiceLiveOpen(true);
+                      setTimeout(() => startVoiceListen(), 250);
+                    }}
+                    aria-label="Canlı sesli sohbet"
+                    title="Canlı sesli sohbet (yapay zeka ile konuş)"
+                    className="transition hover:text-foreground"
+                  >
+                    <AudioLines size={20} />
+                  </button>
+                  <button
                     type="submit"
                     disabled={streaming || !input.trim()}
                     aria-label="Gönder"
@@ -1515,6 +1702,115 @@ function Index() {
               kişisel AI bağlantıları için hazırlanmış sade KıvançAI deneyimi.
             </p>
             <p className="mt-3 text-xs text-muted-foreground">v1.0 — © Kıvanç</p>
+          </div>
+        </div>
+      )}
+
+      {voiceLiveOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
+            <button
+              onClick={closeVoiceLive}
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              aria-label="Kapat"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div
+                  className={`grid h-32 w-32 place-items-center rounded-full bg-brand/15 ${
+                    voiceListening ? "animate-pulse" : ""
+                  }`}
+                >
+                  <img
+                    src={logoImg}
+                    alt="KıvançAI"
+                    className={`h-24 w-24 rounded-full object-cover transition ${
+                      voiceSpeaking ? "scale-110 ring-4 ring-brand" : ""
+                    }`}
+                  />
+                </div>
+                {voiceSpeaking && (
+                  <div className="absolute inset-0 grid place-items-center">
+                    <AudioLines className="h-10 w-10 animate-pulse text-brand" />
+                  </div>
+                )}
+              </div>
+              <h3 className="font-serif text-xl font-bold">Canlı sesli sohbet</h3>
+              <p className="text-center text-xs text-muted-foreground">
+                {voiceListening
+                  ? "🎙 Dinliyorum… konuşmaya başla"
+                  : voiceSpeaking
+                    ? "🔊 KıvançAI cevap veriyor…"
+                    : "Mikrofona bas, konuş; KıvançAI sana sesli cevap versin."}
+              </p>
+
+              {(voiceTranscript || voiceReply) && (
+                <div className="w-full space-y-2 rounded-xl bg-muted/40 p-3 text-sm">
+                  {voiceTranscript && (
+                    <p>
+                      <span className="font-semibold text-foreground">Sen:</span>{" "}
+                      <span className="text-muted-foreground">{voiceTranscript}</span>
+                    </p>
+                  )}
+                  {voiceReply && (
+                    <p>
+                      <span className="font-semibold text-brand">KıvançAI:</span>{" "}
+                      <span className="text-foreground">{voiceReply}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {screenSharing && (
+                <video
+                  ref={screenVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full rounded-lg border border-border"
+                />
+              )}
+
+              <div className="flex w-full items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => (voiceListening ? stopVoiceListen() : startVoiceListen())}
+                  className={`grid h-14 w-14 place-items-center rounded-full transition ${
+                    voiceListening
+                      ? "bg-destructive text-destructive-foreground animate-pulse"
+                      : "bg-brand text-primary-foreground hover:opacity-90"
+                  }`}
+                  aria-label={voiceListening ? "Dinlemeyi durdur" : "Dinlemeye başla"}
+                  title={voiceListening ? "Dinlemeyi durdur" : "Dinlemeye başla"}
+                >
+                  <Mic size={22} />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleScreenShare}
+                  className={`grid h-14 w-14 place-items-center rounded-full border transition ${
+                    screenSharing
+                      ? "border-brand bg-brand/15 text-brand"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  aria-label="Ekran paylaş"
+                  title={screenSharing ? "Ekran paylaşımını durdur" : "Ekranı paylaş"}
+                >
+                  <MonitorUp size={22} />
+                </button>
+                <button
+                  type="button"
+                  onClick={closeVoiceLive}
+                  className="grid h-14 w-14 place-items-center rounded-full border border-border bg-background text-destructive transition hover:bg-destructive hover:text-destructive-foreground"
+                  aria-label="Sohbeti bitir"
+                  title="Sohbeti bitir"
+                >
+                  <PhoneOff size={22} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
