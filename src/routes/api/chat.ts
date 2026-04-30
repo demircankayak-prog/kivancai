@@ -34,7 +34,36 @@ const fallbackAnswer = (messages: unknown): string => {
   if (lower.includes("video")) {
     return "Video için alttaki video tuşuna basıp açıklamayı yazman yeterli kanka.";
   }
-  return `Kanka mesajın geldi: “${text.slice(0, 180)}”. Şu an yedek hızlı moddayım; kısa ve net yazarsan adım adım yardımcı olurum.`;
+
+  // Anlamsız / klavye gevezeliği tespiti: çok az ünlü harf veya 4+ ardışık ünsüz
+  const letters = text.replace(/[^a-zçğıöşüâîû]/gi, "");
+  const vowels = (letters.match(/[aeıioöuüâîû]/gi) || []).length;
+  const ratio = letters.length ? vowels / letters.length : 1;
+  const hasLongConsonantRun = /[bcçdfgğhjklmnpqrsştvwxyz]{5,}/i.test(text);
+  const isGibberish =
+    letters.length >= 5 && (ratio < 0.18 || hasLongConsonantRun) && !text.includes(" ");
+  if (isGibberish) {
+    return "Kanka pek anlamadım, ne demek istedin? Biraz daha açıklar mısın?";
+  }
+
+  // Tek kelime / kısa konu — neye dair olduğunu sor ve seçenek sun
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 2) {
+    const topic = text.replace(/[?.!]/g, "").trim();
+    // Yemek / tarif sezgisi
+    const foodWords = ["yemek", "tarif", "yemekler", "kahvaltı", "akşam yemeği", "öğle", "tatlı", "çorba", "makarna", "pilav", "kek", "börek", "salata", "pizza", "burger", "köfte", "tavuk", "balık"];
+    if (foodWords.some((w) => lower.includes(w))) {
+      return `**${topic}** dedin kanka 🍳 Sana birkaç fikir vereyim:\n\n- 🍝 Kremalı mantarlı makarna\n- 🥘 Fırında tavuklu sebze\n- 🥗 Akdeniz salatası\n- 🍲 Mercimek çorbası\n- 🥞 Pratik krep\n\nBunlardan birinin tarifini ister misin, yoksa belirli bir malzemen mi var? Yaz hemen vereyim.`;
+    }
+    // Kod / teknoloji sezgisi
+    if (["react", "javascript", "python", "node", "css", "html", "tailwind", "next", "typescript"].includes(lower)) {
+      return `**${topic}** hakkında ne öğrenmek istiyorsun kanka? Kısa bir tanıtım mı, kurulum mu, örnek kod mu, yoksa bir hata mı çözüyorsun? Yaz, anlatayım.`;
+    }
+    // Genel: muhtemelen kişi/yer/kavram adı — ne istediğini sor
+    return `**${topic}** dedin kanka — kısa bilgi mi istiyorsun, yoksa başka bir şey mi (futbolcu/oyuncu/youtuber bilgisi, tarif, kod, anlamı...)? Birkaç kelime daha eklersen tam istediğini veririm.`;
+  }
+
+  return `Kanka "${text.slice(0, 140)}" dedin ama tam olarak ne yapmamı istediğini söylemedin. Bilgi mi, fikir mi, kod mu, görsel/video mu? Bir cümleyle anlatırsan anında yardımcı olurum.`;
 };
 
 const streamText = (content: string) =>
