@@ -242,6 +242,7 @@ function Index() {
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [videoCount, setVideoCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
