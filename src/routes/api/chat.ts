@@ -34,7 +34,36 @@ const fallbackAnswer = (messages: unknown): string => {
   if (lower.includes("video")) {
     return "Video için alttaki video tuşuna basıp açıklamayı yazman yeterli kanka.";
   }
-  return `Kanka mesajın geldi: “${text.slice(0, 180)}”. Şu an yedek hızlı moddayım; kısa ve net yazarsan adım adım yardımcı olurum.`;
+
+  // Anlamsız / klavye gevezeliği tespiti: çok az ünlü harf veya 4+ ardışık ünsüz
+  const letters = text.replace(/[^a-zçğıöşüâîû]/gi, "");
+  const vowels = (letters.match(/[aeıioöuüâîû]/gi) || []).length;
+  const ratio = letters.length ? vowels / letters.length : 1;
+  const hasLongConsonantRun = /[bcçdfgğhjklmnpqrsştvwxyz]{5,}/i.test(text);
+  const isGibberish =
+    letters.length >= 5 && (ratio < 0.18 || hasLongConsonantRun) && !text.includes(" ");
+  if (isGibberish) {
+    return "Kanka pek anlamadım, ne demek istedin? Biraz daha açıklar mısın?";
+  }
+
+  // Tek kelime / kısa konu — neye dair olduğunu sor ve seçenek sun
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 2) {
+    const topic = text.replace(/[?.!]/g, "").trim();
+    // Yemek / tarif sezgisi
+    const foodWords = ["yemek", "tarif", "yemekler", "kahvaltı", "akşam yemeği", "öğle", "tatlı", "çorba", "makarna", "pilav", "kek", "börek", "salata", "pizza", "burger", "köfte", "tavuk", "balık"];
+    if (foodWords.some((w) => lower.includes(w))) {
+      return `**${topic}** dedin kanka 🍳 Sana birkaç fikir vereyim:\n\n- 🍝 Kremalı mantarlı makarna\n- 🥘 Fırında tavuklu sebze\n- 🥗 Akdeniz salatası\n- 🍲 Mercimek çorbası\n- 🥞 Pratik krep\n\nBunlardan birinin tarifini ister misin, yoksa belirli bir malzemen mi var? Yaz hemen vereyim.`;
+    }
+    // Kod / teknoloji sezgisi
+    if (["react", "javascript", "python", "node", "css", "html", "tailwind", "next", "typescript"].includes(lower)) {
+      return `**${topic}** hakkında ne öğrenmek istiyorsun kanka? Kısa bir tanıtım mı, kurulum mu, örnek kod mu, yoksa bir hata mı çözüyorsun? Yaz, anlatayım.`;
+    }
+    // Genel: muhtemelen kişi/yer/kavram adı — ne istediğini sor
+    return `**${topic}** dedin kanka — kısa bilgi mi istiyorsun, yoksa başka bir şey mi (futbolcu/oyuncu/youtuber bilgisi, tarif, kod, anlamı...)? Birkaç kelime daha eklersen tam istediğini veririm.`;
+  }
+
+  return `Kanka "${text.slice(0, 140)}" dedin ama tam olarak ne yapmamı istediğini söylemedin. Bilgi mi, fikir mi, kod mu, görsel/video mu? Bir cümleyle anlatırsan anında yardımcı olurum.`;
 };
 
 const streamText = (content: string) =>
@@ -71,11 +100,19 @@ YETENEKLERİN:
 ÖNCE MESAJI ANLA — SONRA CEVAP VER:
 1. Kullanıcının mesajını dikkatlice oku ve NE İSTEDİĞİNİ anla.
 2. Mesaj anlamsız/rastgele harflerse (örn. "ıkasdghuısadgyuf", "asdfgh") → KOD YAZMA, uzun cevap verme. Kısaca: "Kanka pek anlamadım, ne demek istedin? Biraz daha açıklar mısın?" de.
-3. Mesaj sadece bir isim/kelime ise (örn. "Asensio", "makarna", "React"):
-   - Eğer net bir konu/isimse → o konuda bilgi ver (örn. "Asensio bir futbolcu, Fenerbahçe'de oynuyor..." gibi).
-   - Eğer birden fazla anlama gelebiliyorsa → sor: "Futbolcu Asensio'dan mı bahsediyorsun yoksa başka bir şey mi? Bilgi mi istiyorsun, yoksa tarif/kod mu?"
+3. Mesaj sadece bir isim/kelime ise (örn. "Asensio", "Baldiback", "Fatih", "makarna", "React"):
+   - Net bir konu/isimse → o konuda DOĞRUDAN bilgi ver. Örn:
+     • "Asensio" → "Asensio İspanyol futbolcu, Real Madrid altyapısından çıktı, şu an ... oynuyor." gibi bilgi ver.
+     • "Baldiback" → Türk YouTuber Fatih Selim Yurdakul'dur; gerçek adı, içerik tarzı, kanal bilgisi ile anlat.
+     • Yemek adı → kısa tarif veya birkaç tarif önerisi sun.
+   - Sadece birden çok anlama gelebiliyorsa hangisi olduğunu sor.
 4. Sadece açıkça KOD istendiğinde kod yaz ("kod yaz", "html ver", "şu fonksiyonu yap" gibi). Kendiliğinden kod üretme.
 5. Selamlaşma/sohbet mesajlarına (selam, naber, nasılsın) doğal sohbet tarzında kısa cevap ver.
+
+ÜNLÜLER, YOUTUBERLAR, KAMUYA AÇIK KİŞİLER:
+- Türk/dünya youtuber, streamer, futbolcu, oyuncu, sanatçı, politikacı vb. kamuya açık kişiler hakkında ASLA "bilgi veremem", "uygun değil", "etik değil" deme.
+- Bilinen takma adları gerçek adlarıyla eşleştir (örn. Baldiback → Fatih Selim Yurdakul, Enes Batur, Orkun Işıtmak, Ruhi Çenet vb.).
+- Net ve dürüst bilgi ver: kim olduğu, ne yaptığı, içerik tarzı, gerçek adı (kamuya açıksa). Engel/sansür koyma.
 
 CEVAP TARZI:
 - Türkçe sorulara Türkçe, diğer dillere o dilde cevap ver. Doğal, samimi, "kanka" tarzında konuş.

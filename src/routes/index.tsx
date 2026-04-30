@@ -47,6 +47,7 @@ type Msg = {
   attachments?: Attachment[];
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
+  videoWatermark?: boolean; // ilk videoda false, sonrakilerde true
 };
 type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
@@ -241,6 +242,7 @@ function Index() {
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatingVideo, setGeneratingVideo] = useState(false);
+  const [videoCount, setVideoCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -472,9 +474,11 @@ function Index() {
           role: "assistant",
           content: data.message || "İşte istediğin video kanka 🎬",
           generatedVideo: data.video,
+          videoWatermark: videoCount >= 1, // ilk video temiz, 2.den itibaren watermark
         };
         return arr;
       });
+      setVideoCount((c) => c + 1);
     } catch (e) {
       setMessages((p) => {
         const arr = [...p];
@@ -983,11 +987,20 @@ function Index() {
                       )}
                       {m.generatedVideo && (
                         <div className="mb-2">
-                          <video
-                            src={m.generatedVideo}
-                            controls
-                            className="max-h-96 w-full rounded-lg"
-                          />
+                          <div className="relative">
+                            <video
+                              src={m.generatedVideo}
+                              controls
+                              className="max-h-96 w-full rounded-lg"
+                            />
+                            {m.videoWatermark && (
+                              <img
+                                src={logoImg}
+                                alt="KıvançAI"
+                                className="pointer-events-none absolute bottom-2 right-2 h-8 w-8 rounded-full border border-white/70 shadow-md"
+                              />
+                            )}
+                          </div>
                           <a
                             href={m.generatedVideo}
                             download="kivanc-ai-video.mp4"
