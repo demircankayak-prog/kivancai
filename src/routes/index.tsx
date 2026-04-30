@@ -389,8 +389,16 @@ function Index() {
       "fotoğraf ver",
       "görselini yap",
       "resmini yap",
+      "new görsel",
+      "new resim",
+      "new image",
+      "new photo",
+      "new foto",
     ];
-    return triggers.some((k) => t.includes(k));
+    if (triggers.some((k) => t.includes(k))) return true;
+    // "new <şey>" tek başına -> görsel olarak yorumla
+    if (/^new\s+\S+/i.test(text.trim())) return true;
+    return false;
   };
 
   // Video oluşturma niyeti
@@ -409,41 +417,67 @@ function Index() {
       "video çek",
       "klip yap",
       "klip oluştur",
+      "new video",
+      "new klip",
     ];
     return triggers.some((k) => t.includes(k));
   };
 
   const generateImage = async (prompt: string, inputImage?: string) => {
     setGeneratingImage(true);
+    // "Düşünüyor" mesajı + 30 sn düşünme süresi
+    setMessages((p) => [
+      ...p,
+      {
+        role: "assistant",
+        content: "🎨 Görseli iyice düşünüyorum kanka, ~30 sn sonra hazır olacak...",
+      },
+    ]);
+    const thinkStart = Date.now();
     try {
-      const cleanPrompt = prompt.replace(/^\/(görsel|gorsel|image)\s*/i, "");
+      const cleanPrompt = prompt
+        .replace(/^\/(görsel|gorsel|image)\s*/i, "")
+        .replace(/^new\s+/i, "");
       const resp = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: cleanPrompt, inputImage }),
       });
       const data = await resp.json();
+      // 30 sn dolana kadar bekle (kalan süreyi tamamla)
+      const elapsed = Date.now() - thinkStart;
+      const remain = 30000 - elapsed;
+      if (remain > 0) await new Promise((r) => setTimeout(r, remain));
       if (!resp.ok || !data.image) {
-        setMessages((p) => [
-          ...p,
-          { role: "assistant", content: `⚠️ ${data.error || "Görsel oluşturulamadı"}` },
-        ]);
+        setMessages((p) => {
+          const arr = [...p];
+          arr[arr.length - 1] = {
+            role: "assistant",
+            content: `⚠️ ${data.error || "Görsel oluşturulamadı"}`,
+          };
+          return arr;
+        });
         return;
       }
       const watermarked = await addWatermark(data.image);
-      setMessages((p) => [
-        ...p,
-        {
+      setMessages((p) => {
+        const arr = [...p];
+        arr[arr.length - 1] = {
           role: "assistant",
           content: "İşte istediğin görsel kanka 🎨",
           generatedImage: watermarked,
-        },
-      ]);
+        };
+        return arr;
+      });
     } catch (e) {
-      setMessages((p) => [
-        ...p,
-        { role: "assistant", content: "⚠️ Görsel oluşturulurken hata oldu." },
-      ]);
+      setMessages((p) => {
+        const arr = [...p];
+        arr[arr.length - 1] = {
+          role: "assistant",
+          content: "⚠️ Görsel oluşturulurken hata oldu.",
+        };
+        return arr;
+      });
     } finally {
       setGeneratingImage(false);
     }
