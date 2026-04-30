@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/image")({
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash-image",
+              model: "google/gemini-3.1-flash-image-preview",
               messages: [{ role: "user", content: userContent }],
               modalities: ["image", "text"],
             }),
@@ -56,9 +56,16 @@ export const Route = createFileRoute("/api/image")({
           }
 
           const data = await resp.json();
-          const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          const msg = data.choices?.[0]?.message;
+          const imageUrl =
+            msg?.images?.[0]?.image_url?.url ||
+            msg?.images?.[0]?.url ||
+            (Array.isArray(msg?.content)
+              ? msg.content.find((c: any) => c?.image_url?.url)?.image_url?.url
+              : undefined);
           if (!imageUrl) {
-            return new Response(JSON.stringify({ error: "Görsel dönmedi" }), { status: 500 });
+            console.error("Image gen empty response:", JSON.stringify(data).slice(0, 500));
+            return fallbackImageResponse(prompt);
           }
           return Response.json({ image: imageUrl });
         } catch (e) {
