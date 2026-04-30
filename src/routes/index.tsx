@@ -506,6 +506,169 @@ function Index() {
     }
   };
 
+  // ===== Canlı sesli sohbet (Web Speech + Lovable AI + TTS) =====
+  const speakReply = (text: string) => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "tr-TR";
+      utter.rate = 1.05;
+      utter.pitch = 1;
+      const voices = synth.getVoices();
+      const tr = voices.find((v) => v.lang?.toLowerCase().startsWith("tr"));
+      if (tr) utter.voice = tr;
+      utter.onstart = () => setVoiceSpeaking(true);
+      utter.onend = () => setVoiceSpeaking(false);
+      utter.onerror = () => setVoiceSpeaking(false);
+      synth.speak(utter);
+    } catch (e) {
+      console.error("TTS error:", e);
+    }
+  };
+
+  const askLiveAI = async (userText: string) => {
+    setVoiceTranscript(userText);
+    setVoiceReply("…");
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: `Sesli konuşma modundayım, kısa ve doğal cevap ver (1-3 cümle). Soru: ${userText}`,
+            },
+          ],
+        }),
+      });
+      if (!resp.ok || !resp.body) {
+        const fb = "Kanka şu an cevap veremedim, tekrar dener misin?";
+        setVoiceReply(fb);
+        speakReply(fb);
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content as string | undefined;
+            if (c) {
+              full += c;
+              setVoiceReply(full);
+            }
+          } catch {
+            buf = line + "\n" + buf;
+            break;
+          }
+        }
+      }
+      const reply = full.trim() || "Tamamdır kanka.";
+      speakReply(reply);
+    } catch (e) {
+      console.error("live AI error:", e);
+      const fb = "Bağlantıda küçük bir sorun oldu kanka, tekrar dener misin?";
+      setVoiceReply(fb);
+      speakReply(fb);
+    }
+  };
+
+  const startVoiceListen = () => {
+    const SR =
+      (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognition }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition;
+    if (!SR) {
+      alert("Tarayıcın canlı ses tanımayı desteklemiyor. Chrome'u dene kanka.");
+      return;
+    }
+    try {
+      window.speechSynthesis?.cancel();
+      const rec = new SR();
+      rec.lang = "tr-TR";
+      rec.interimResults = false;
+      rec.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map((r) => r[0].transcript)
+          .join(" ")
+          .trim();
+        if (transcript) askLiveAI(transcript);
+      };
+      rec.onend = () => setVoiceListening(false);
+      rec.start();
+      voiceRecogRef.current = rec;
+      setVoiceListening(true);
+    } catch (e) {
+      console.error("voice listen error:", e);
+      setVoiceListening(false);
+    }
+  };
+
+  const stopVoiceListen = () => {
+    try {
+      voiceRecogRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    setVoiceListening(false);
+  };
+
+  const toggleScreenShare = async () => {
+    if (screenSharing) {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+      if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+      setScreenSharing(false);
+      return;
+    }
+    try {
+      const stream = await (navigator.mediaDevices as MediaDevices & {
+        getDisplayMedia: (c: { video: boolean; audio: boolean }) => Promise<MediaStream>;
+      }).getDisplayMedia({ video: true, audio: false });
+      screenStreamRef.current = stream;
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = stream;
+        screenVideoRef.current.play().catch(() => undefined);
+      }
+      stream.getVideoTracks()[0].onended = () => {
+        setScreenSharing(false);
+        screenStreamRef.current = null;
+      };
+      setScreenSharing(true);
+    } catch (e) {
+      console.error("screen share error:", e);
+    }
+  };
+
+  const closeVoiceLive = () => {
+    stopVoiceListen();
+    window.speechSynthesis?.cancel();
+    if (screenSharing) {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+      setScreenSharing(false);
+    }
+    setVoiceLiveOpen(false);
+    setVoiceTranscript("");
+    setVoiceReply("");
+    setVoiceSpeaking(false);
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem("kivanc-saved-chats");
     if (stored)
