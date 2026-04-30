@@ -1705,6 +1705,115 @@ function Index() {
           </div>
         </div>
       )}
+
+      {voiceLiveOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
+            <button
+              onClick={closeVoiceLive}
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              aria-label="Kapat"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div
+                  className={`grid h-32 w-32 place-items-center rounded-full bg-brand/15 ${
+                    voiceListening ? "animate-pulse" : ""
+                  }`}
+                >
+                  <img
+                    src={logoImg}
+                    alt="KıvançAI"
+                    className={`h-24 w-24 rounded-full object-cover transition ${
+                      voiceSpeaking ? "scale-110 ring-4 ring-brand" : ""
+                    }`}
+                  />
+                </div>
+                {voiceSpeaking && (
+                  <div className="absolute inset-0 grid place-items-center">
+                    <AudioLines className="h-10 w-10 animate-pulse text-brand" />
+                  </div>
+                )}
+              </div>
+              <h3 className="font-serif text-xl font-bold">Canlı sesli sohbet</h3>
+              <p className="text-center text-xs text-muted-foreground">
+                {voiceListening
+                  ? "🎙 Dinliyorum… konuşmaya başla"
+                  : voiceSpeaking
+                    ? "🔊 KıvançAI cevap veriyor…"
+                    : "Mikrofona bas, konuş; KıvançAI sana sesli cevap versin."}
+              </p>
+
+              {(voiceTranscript || voiceReply) && (
+                <div className="w-full space-y-2 rounded-xl bg-muted/40 p-3 text-sm">
+                  {voiceTranscript && (
+                    <p>
+                      <span className="font-semibold text-foreground">Sen:</span>{" "}
+                      <span className="text-muted-foreground">{voiceTranscript}</span>
+                    </p>
+                  )}
+                  {voiceReply && (
+                    <p>
+                      <span className="font-semibold text-brand">KıvançAI:</span>{" "}
+                      <span className="text-foreground">{voiceReply}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {screenSharing && (
+                <video
+                  ref={screenVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full rounded-lg border border-border"
+                />
+              )}
+
+              <div className="flex w-full items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => (voiceListening ? stopVoiceListen() : startVoiceListen())}
+                  className={`grid h-14 w-14 place-items-center rounded-full transition ${
+                    voiceListening
+                      ? "bg-destructive text-destructive-foreground animate-pulse"
+                      : "bg-brand text-primary-foreground hover:opacity-90"
+                  }`}
+                  aria-label={voiceListening ? "Dinlemeyi durdur" : "Dinlemeye başla"}
+                  title={voiceListening ? "Dinlemeyi durdur" : "Dinlemeye başla"}
+                >
+                  <Mic size={22} />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleScreenShare}
+                  className={`grid h-14 w-14 place-items-center rounded-full border transition ${
+                    screenSharing
+                      ? "border-brand bg-brand/15 text-brand"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  aria-label="Ekran paylaş"
+                  title={screenSharing ? "Ekran paylaşımını durdur" : "Ekranı paylaş"}
+                >
+                  <MonitorUp size={22} />
+                </button>
+                <button
+                  type="button"
+                  onClick={closeVoiceLive}
+                  className="grid h-14 w-14 place-items-center rounded-full border border-border bg-background text-destructive transition hover:bg-destructive hover:text-destructive-foreground"
+                  aria-label="Sohbeti bitir"
+                  title="Sohbeti bitir"
+                >
+                  <PhoneOff size={22} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
