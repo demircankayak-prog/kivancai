@@ -987,11 +987,20 @@ function Index() {
                       )}
                       {m.generatedVideo && (
                         <div className="mb-2">
-                          <video
-                            src={m.generatedVideo}
-                            controls
-                            className="max-h-96 w-full rounded-lg"
-                          />
+                          <div className="relative">
+                            <video
+                              src={m.generatedVideo}
+                              controls
+                              className="max-h-96 w-full rounded-lg"
+                            />
+                            {m.videoWatermark && (
+                              <img
+                                src={logoImg}
+                                alt="KıvançAI"
+                                className="pointer-events-none absolute bottom-2 right-2 h-8 w-8 rounded-full border border-white/70 shadow-md"
+                              />
+                            )}
+                          </div>
                           <a
                             href={m.generatedVideo}
                             download="kivanc-ai-video.mp4"
