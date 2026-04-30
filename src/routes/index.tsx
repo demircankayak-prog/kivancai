@@ -32,6 +32,9 @@ import {
   MessageSquare,
   NotebookTabs,
   Shield,
+  AudioLines,
+  MonitorUp,
+  PhoneOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/kivancai-logo-circle.png";
