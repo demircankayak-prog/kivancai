@@ -474,9 +474,11 @@ function Index() {
           role: "assistant",
           content: data.message || "İşte istediğin video kanka 🎬",
           generatedVideo: data.video,
+          videoWatermark: videoCount >= 1, // ilk video temiz, 2.den itibaren watermark
         };
         return arr;
       });
+      setVideoCount((c) => c + 1);
     } catch (e) {
       setMessages((p) => {
         const arr = [...p];
