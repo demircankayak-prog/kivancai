@@ -442,15 +442,13 @@ function Index() {
 
   const generateImage = async (prompt: string, inputImage?: string) => {
     setGeneratingImage(true);
-    // "Düşünüyor" mesajı + 30 sn düşünme süresi
     setMessages((p) => [
       ...p,
       {
         role: "assistant",
-        content: "🎨 Görseli iyice düşünüyorum kanka, ~30 sn sonra hazır olacak...",
+        content: "🎨 Görseli hazırlıyorum kanka, birazdan geliyor...",
       },
     ]);
-    const thinkStart = Date.now();
     try {
       const cleanPrompt = prompt
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
@@ -461,10 +459,6 @@ function Index() {
         body: JSON.stringify({ prompt: cleanPrompt, inputImage }),
       });
       const data = await resp.json();
-      // 30 sn dolana kadar bekle (kalan süreyi tamamla)
-      const elapsed = Date.now() - thinkStart;
-      const remain = 30000 - elapsed;
-      if (remain > 0) await new Promise((r) => setTimeout(r, remain));
       if (!resp.ok || !data.image) {
         setMessages((p) => {
           const arr = [...p];
@@ -517,15 +511,25 @@ function Index() {
         body: JSON.stringify({ prompt: cleanPrompt, duration }),
       });
       const data = await resp.json();
-      if (data.fallback) {
-        await new Promise((resolve) => setTimeout(resolve, 180000));
-      }
       if (!resp.ok || !data.video) {
         setMessages((p) => {
           const arr = [...p];
           arr[arr.length - 1] = {
             role: "assistant",
             content: "🎬 Video şu an hazırlanamadı kanka, biraz sonra tekrar deneyelim.",
+          };
+          return arr;
+        });
+        return;
+      }
+      if (data.fallback) {
+        // Fallback (anahtar yok / kota / hata) — kullanıcıyı uyar, hazır video yerine net mesaj göster
+        setMessages((p) => {
+          const arr = [...p];
+          arr[arr.length - 1] = {
+            role: "assistant",
+            content:
+              "🎬 Video servisi şu an cevap vermedi kanka. Birkaç dakika sonra tekrar dener misin?",
           };
           return arr;
         });
