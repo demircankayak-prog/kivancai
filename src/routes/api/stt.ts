@@ -12,8 +12,8 @@ export const Route = createFileRoute("/api/stt")({
           }
 
           const incoming = await request.formData();
-          const file = incoming.get("file");
-          if (!(file instanceof File) && !(file instanceof Blob)) {
+          const file = incoming.get("file") as unknown as Blob | null;
+          if (!file || typeof (file as Blob).arrayBuffer !== "function") {
             return Response.json({ error: "Ses dosyası gerekli" }, { status: 400 });
           }
 
