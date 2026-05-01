@@ -56,7 +56,13 @@ type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
   lang: string;
   interimResults: boolean;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  continuous?: boolean;
+  onresult:
+    | ((event: {
+        resultIndex: number;
+        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+      }) => void)
+    | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
   start: () => void;
