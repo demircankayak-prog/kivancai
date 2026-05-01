@@ -688,15 +688,45 @@ function Index() {
       window.speechSynthesis?.cancel();
       const rec = new SR();
       rec.lang = "tr-TR";
-      rec.interimResults = false;
+      (rec as unknown as { continuous?: boolean }).continuous = true;
+      rec.interimResults = true;
+      let finalText = "";
+      let interimText = "";
       rec.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map((r) => r[0].transcript)
-          .join(" ")
-          .trim();
-        if (transcript) askLiveAI(transcript);
+        interimText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) finalText += r[0].transcript + " ";
+          else interimText += r[0].transcript;
+        }
+        const live = (finalText + " " + interimText).trim();
+        if (live) setVoiceTranscript(live);
+        // AI konuşurken kullanıcı söze girerse AI'ı sustur (barge-in)
+        if (interimText.trim().length > 2 && window.speechSynthesis?.speaking) {
+          window.speechSynthesis.cancel();
+          setVoiceSpeaking(false);
+        }
       };
-      rec.onend = () => setVoiceListening(false);
+      rec.onend = () => {
+        const text = finalText.trim();
+        finalText = "";
+        interimText = "";
+        if (text) {
+          askLiveAI(text);
+        } else if (voiceLiveOpen) {
+          // Sessizlik nedeniyle bitti → tekrar başlat
+          try {
+            rec.start();
+            return;
+          } catch {
+            /* ignore */
+          }
+        }
+        setVoiceListening(false);
+      };
+      (rec as unknown as { onerror?: (e: unknown) => void }).onerror = (e: unknown) => {
+        console.warn("STT error:", e);
+      };
       rec.start();
       voiceRecogRef.current = rec;
       setVoiceListening(true);
