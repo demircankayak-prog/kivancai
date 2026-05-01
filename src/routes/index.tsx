@@ -259,7 +259,6 @@ function Index() {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceReply, setVoiceReply] = useState("");
   const [screenSharing, setScreenSharing] = useState(false);
-  const voiceRecogRef = useRef<BrowserSpeechRecognition | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
