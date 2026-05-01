@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/video")({
             return fallbackVideoResponse();
           }
 
-          // Kling v1.6 Standard via Replicate (~$0.28 per 5s, supports 5 or 10s)
+          // Kling v1.6 Standard via Replicate
           const createResp = await fetch(
             "https://api.replicate.com/v1/models/kwaivgi/kling-v1.6-standard/predictions",
             {
@@ -31,7 +31,6 @@ export const Route = createFileRoute("/api/video")({
               headers: {
                 Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
                 "Content-Type": "application/json",
-                Prefer: "wait=60",
               },
               body: JSON.stringify({
                 input: {
@@ -39,7 +38,7 @@ export const Route = createFileRoute("/api/video")({
                   duration: dur,
                   aspect_ratio: "16:9",
                   cfg_scale: 0.5,
-                  negative_prompt: "",
+                  negative_prompt: "blur, distort, and low quality",
                 },
               }),
             },
