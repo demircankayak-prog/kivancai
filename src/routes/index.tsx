@@ -35,6 +35,7 @@ import {
   AudioLines,
   MonitorUp,
   PhoneOff,
+  Camera,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/kivancai-logo-circle.png";
@@ -258,9 +259,18 @@ function Index() {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceReply, setVoiceReply] = useState("");
   const [screenSharing, setScreenSharing] = useState(false);
-  const voiceRecogRef = useRef<BrowserSpeechRecognition | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const vadRafRef = useRef<number | null>(null);
+  const [screenHelpLoading, setScreenHelpLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -431,15 +441,13 @@ function Index() {
 
   const generateImage = async (prompt: string, inputImage?: string) => {
     setGeneratingImage(true);
-    // "Düşünüyor" mesajı + 30 sn düşünme süresi
     setMessages((p) => [
       ...p,
       {
         role: "assistant",
-        content: "🎨 Görseli iyice düşünüyorum kanka, ~30 sn sonra hazır olacak...",
+        content: "🎨 Görseli hazırlıyorum kanka, birazdan geliyor...",
       },
     ]);
-    const thinkStart = Date.now();
     try {
       const cleanPrompt = prompt
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
@@ -450,10 +458,6 @@ function Index() {
         body: JSON.stringify({ prompt: cleanPrompt, inputImage }),
       });
       const data = await resp.json();
-      // 30 sn dolana kadar bekle (kalan süreyi tamamla)
-      const elapsed = Date.now() - thinkStart;
-      const remain = 30000 - elapsed;
-      if (remain > 0) await new Promise((r) => setTimeout(r, remain));
       if (!resp.ok || !data.image) {
         setMessages((p) => {
           const arr = [...p];
@@ -506,15 +510,25 @@ function Index() {
         body: JSON.stringify({ prompt: cleanPrompt, duration }),
       });
       const data = await resp.json();
-      if (data.fallback) {
-        await new Promise((resolve) => setTimeout(resolve, 180000));
-      }
       if (!resp.ok || !data.video) {
         setMessages((p) => {
           const arr = [...p];
           arr[arr.length - 1] = {
             role: "assistant",
             content: "🎬 Video şu an hazırlanamadı kanka, biraz sonra tekrar deneyelim.",
+          };
+          return arr;
+        });
+        return;
+      }
+      if (data.fallback) {
+        // Fallback (anahtar yok / kota / hata) — kullanıcıyı uyar, hazır video yerine net mesaj göster
+        setMessages((p) => {
+          const arr = [...p];
+          arr[arr.length - 1] = {
+            role: "assistant",
+            content:
+              "🎬 Video servisi şu an cevap vermedi kanka. Birkaç dakika sonra tekrar dener misin?",
           };
           return arr;
         });
@@ -546,80 +560,68 @@ function Index() {
     }
   };
 
-  // ===== Canlı sesli sohbet (Web Speech + Lovable AI + TTS) =====
-  const pickBestTurkishVoice = (): SpeechSynthesisVoice | null => {
-    const synth = window.speechSynthesis;
-    if (!synth) return null;
-    const voices = synth.getVoices();
-    if (!voices.length) return null;
-    const tr = voices.filter((v) => v.lang?.toLowerCase().startsWith("tr"));
-    if (!tr.length) return null;
-    // Tercih sırası: Google > Microsoft (Tolga/Yelda/Filiz) > Apple (Yelda) > diğer
-    const score = (v: SpeechSynthesisVoice) => {
-      const n = `${v.name} ${v.voiceURI}`.toLowerCase();
-      let s = 0;
-      if (n.includes("google")) s += 100;
-      if (n.includes("natural") || n.includes("neural") || n.includes("online")) s += 60;
-      if (n.includes("yelda") || n.includes("tolga") || n.includes("filiz") || n.includes("emel")) s += 40;
-      if (n.includes("microsoft")) s += 30;
-      if (v.localService) s += 5;
-      return s;
-    };
-    return tr.sort((a, b) => score(b) - score(a))[0] ?? tr[0];
+  // ===== Canlı sesli sohbet (ElevenLabs Scribe + Turbo TTS) =====
+  const stopTts = () => {
+    try {
+      ttsAbortRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    if (ttsAudioRef.current) {
+      try {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.src = "";
+      } catch {
+        /* ignore */
+      }
+      ttsAudioRef.current = null;
+    }
+    setVoiceSpeaking(false);
   };
 
-  const speakReply = (text: string) => {
+  const speakReply = async (text: string) => {
+    const clean = text
+      .replace(/[*_`#>~]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) return;
+    stopTts();
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
     try {
-      const synth = window.speechSynthesis;
-      if (!synth || !text.trim()) return;
-      synth.cancel();
-      // Cümlelere böl — daha akıcı, doğal tonlama; ilk parça hemen başlasın
-      const clean = text
-        .replace(/[*_`#>~]+/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      const chunks = clean.match(/[^.!?…]+[.!?…]?/g)?.map((s) => s.trim()).filter(Boolean) || [clean];
-      const voice = pickBestTurkishVoice();
-      let started = false;
-      chunks.forEach((chunk, i) => {
-        const utter = new SpeechSynthesisUtterance(chunk);
-        utter.lang = "tr-TR";
-        utter.rate = 1.0;
-        utter.pitch = 1.05;
-        utter.volume = 1;
-        if (voice) utter.voice = voice;
-        if (i === 0) {
-          utter.onstart = () => {
-            started = true;
-            setVoiceSpeaking(true);
-          };
-        }
-        if (i === chunks.length - 1) {
-          utter.onend = () => setVoiceSpeaking(false);
-          utter.onerror = () => setVoiceSpeaking(false);
-        }
-        synth.speak(utter);
+      setVoiceSpeaking(true);
+      const resp = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean }),
+        signal: ctrl.signal,
       });
-      // Bazı tarayıcılar onstart tetiklemeyebilir → garanti
-      setTimeout(() => {
-        if (!started) setVoiceSpeaking(true);
-      }, 100);
+      if (!resp.ok) {
+        console.error("TTS http error", resp.status);
+        setVoiceSpeaking(false);
+        return;
+      }
+      const blob = await resp.blob();
+      if (ctrl.signal.aborted) return;
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      audio.onended = () => {
+        setVoiceSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setVoiceSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play().catch(() => undefined);
     } catch (e) {
-      console.error("TTS error:", e);
+      if ((e as { name?: string })?.name !== "AbortError") {
+        console.error("TTS error:", e);
+      }
       setVoiceSpeaking(false);
     }
   };
-
-  // Sesleri önceden yükle (Chrome async yüklüyor)
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    const load = () => window.speechSynthesis.getVoices();
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
-    return () => {
-      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
 
   const askLiveAI = async (userText: string) => {
     setVoiceTranscript(userText);
@@ -640,7 +642,7 @@ function Index() {
       if (!resp.ok || !resp.body) {
         const fb = "Kanka şu an cevap veremedim, tekrar dener misin?";
         setVoiceReply(fb);
-        speakReply(fb);
+        await speakReply(fb);
         return;
       }
       const reader = resp.body.getReader();
@@ -673,68 +675,104 @@ function Index() {
         }
       }
       const reply = full.trim() || "Tamamdır kanka.";
-      speakReply(reply);
+      await speakReply(reply);
     } catch (e) {
       console.error("live AI error:", e);
       const fb = "Bağlantıda küçük bir sorun oldu kanka, tekrar dener misin?";
       setVoiceReply(fb);
-      speakReply(fb);
+      await speakReply(fb);
     }
   };
 
-  const startVoiceListen = () => {
-    const SR =
-      (window as unknown as { SpeechRecognition?: new () => BrowserSpeechRecognition }).SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: new () => BrowserSpeechRecognition }).webkitSpeechRecognition;
-    if (!SR) {
-      alert("Tarayıcın canlı ses tanımayı desteklemiyor. Chrome'u dene kanka.");
+  const transcribeAndAsk = async (blob: Blob) => {
+    if (blob.size < 2000) return; // çok kısa → sessizlik
+    try {
+      const fd = new FormData();
+      fd.append("file", blob, "audio.webm");
+      const resp = await fetch("/api/stt", { method: "POST", body: fd });
+      const data = await resp.json().catch(() => ({}));
+      const text = (data?.text || "").trim();
+      if (!text) return;
+      setVoiceTranscript(text);
+      await askLiveAI(text);
+    } catch (e) {
+      console.error("STT call error:", e);
+    }
+  };
+
+  const stopRecorder = (silent?: boolean) => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (vadRafRef.current) {
+      cancelAnimationFrame(vadRafRef.current);
+      vadRafRef.current = null;
+    }
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      try {
+        if (silent) audioChunksRef.current = [];
+        mr.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const startVoiceListen = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      alert("Tarayıcın mikrofonu desteklemiyor.");
       return;
     }
     try {
-      window.speechSynthesis?.cancel();
-      const rec = new SR();
-      rec.lang = "tr-TR";
-      (rec as unknown as { continuous?: boolean }).continuous = true;
-      rec.interimResults = true;
-      let finalText = "";
-      let interimText = "";
-      rec.onresult = (event) => {
-        interimText = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const r = event.results[i];
-          if (r.isFinal) finalText += r[0].transcript + " ";
-          else interimText += r[0].transcript;
-        }
-        const live = (finalText + " " + interimText).trim();
-        if (live) setVoiceTranscript(live);
-        // AI konuşurken kullanıcı söze girerse AI'ı sustur (barge-in)
-        if (interimText.trim().length > 2 && window.speechSynthesis?.speaking) {
-          window.speechSynthesis.cancel();
-          setVoiceSpeaking(false);
-        }
+      stopTts();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      micStreamRef.current = stream;
+      const mime =
+        (typeof MediaRecorder !== "undefined" &&
+          (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+            ? "audio/webm;codecs=opus"
+            : MediaRecorder.isTypeSupported("audio/webm")
+              ? "audio/webm"
+              : MediaRecorder.isTypeSupported("audio/mp4")
+                ? "audio/mp4"
+                : "")) || "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      rec.onend = () => {
-        const text = finalText.trim();
-        finalText = "";
-        interimText = "";
-        if (text) {
-          askLiveAI(text);
-        } else if (voiceLiveOpen) {
-          // Sessizlik nedeniyle bitti → tekrar başlat
+      mr.onstop = async () => {
+        const chunks = audioChunksRef.current;
+        audioChunksRef.current = [];
+        const blob = new Blob(chunks, { type: mime || "audio/webm" });
+        // Mikrofonu aç bırak (canlı sohbet açıkken sürekli dinlesin)
+        if (chunks.length > 0) {
+          await transcribeAndAsk(blob);
+        }
+        // Yeni segment için tekrar başlat
+        if (voiceLiveOpen && micStreamRef.current) {
           try {
-            rec.start();
-            return;
+            audioChunksRef.current = [];
+            mr.start();
+            armSilenceDetector();
           } catch {
             /* ignore */
           }
+        } else {
+          setVoiceListening(false);
         }
-        setVoiceListening(false);
       };
-      (rec as unknown as { onerror?: (e: unknown) => void }).onerror = (e: unknown) => {
-        console.warn("STT error:", e);
-      };
-      rec.start();
-      voiceRecogRef.current = rec;
+      mr.start();
+      armSilenceDetector();
       setVoiceListening(true);
     } catch (e) {
       console.error("voice listen error:", e);
@@ -742,13 +780,112 @@ function Index() {
     }
   };
 
-  const stopVoiceListen = () => {
+  // VAD-light: ses seviyesi ölçer, ~1.2s sessizlik olunca segmenti kapatır
+  const armSilenceDetector = () => {
+    const stream = micStreamRef.current;
+    if (!stream) return;
     try {
-      voiceRecogRef.current?.stop();
-    } catch {
-      /* ignore */
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      src.connect(analyser);
+      analyserRef.current = analyser;
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      let lastSoundAt = Date.now();
+      let spokeAtAll = false;
+      const startedAt = Date.now();
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        if (rms > 0.035) {
+          lastSoundAt = Date.now();
+          spokeAtAll = true;
+          // Barge-in: kullanıcı konuşunca AI'ı sustur
+          if (ttsAudioRef.current && !ttsAudioRef.current.paused) {
+            stopTts();
+          }
+        }
+        const idleMs = Date.now() - lastSoundAt;
+        const elapsed = Date.now() - startedAt;
+        // 1.2 sn sessizlik + en az 1 sn konuşma olduysa segmenti kapat
+        if (spokeAtAll && idleMs > 1200) {
+          vadRafRef.current = null;
+          const mr = mediaRecorderRef.current;
+          if (mr && mr.state === "recording") mr.stop();
+          return;
+        }
+        // 15 sn limit (kullanıcı durmazsa)
+        if (elapsed > 15000 && spokeAtAll) {
+          vadRafRef.current = null;
+          const mr = mediaRecorderRef.current;
+          if (mr && mr.state === "recording") mr.stop();
+          return;
+        }
+        vadRafRef.current = requestAnimationFrame(tick);
+      };
+      vadRafRef.current = requestAnimationFrame(tick);
+    } catch (e) {
+      console.warn("VAD error:", e);
+    }
+  };
+
+  const stopVoiceListen = () => {
+    stopRecorder(true);
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
     }
     setVoiceListening(false);
+  };
+
+  // Ekrandan kare yakala → Vision'a gönder → cevap sesli okunsun
+  const captureScreenAndAsk = async (question?: string) => {
+    const video = screenVideoRef.current;
+    const stream = screenStreamRef.current;
+    if (!video || !stream) {
+      alert("Önce ekran paylaşımını başlat.");
+      return;
+    }
+    try {
+      setScreenHelpLoading(true);
+      const w = video.videoWidth || 1280;
+      const h = video.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const q =
+        question ||
+        voiceTranscript ||
+        "Bu ekranda ne görüyorsun, hangi butona basmalıyım?";
+      const resp = await fetch("/api/screen-help", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, question: q }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      const reply = (data?.reply || "Ekranı analiz edemedim kanka.").toString();
+      setVoiceReply(reply);
+      await speakReply(reply);
+    } catch (e) {
+      console.error("screen capture error:", e);
+    } finally {
+      setScreenHelpLoading(false);
+    }
   };
 
   const toggleScreenShare = async () => {
@@ -780,7 +917,7 @@ function Index() {
 
   const closeVoiceLive = () => {
     stopVoiceListen();
-    window.speechSynthesis?.cancel();
+    stopTts();
     if (screenSharing) {
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
@@ -1923,6 +2060,22 @@ function Index() {
                 >
                   <MonitorUp size={22} />
                 </button>
+                {screenSharing && (
+                  <button
+                    type="button"
+                    disabled={screenHelpLoading}
+                    onClick={() => captureScreenAndAsk()}
+                    className="grid h-14 w-14 place-items-center rounded-full border border-brand bg-brand text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    aria-label="Ekrandan yardım iste"
+                    title="Ekrandan kare al, KıvançAI sana sesli anlatsın"
+                  >
+                    {screenHelpLoading ? (
+                      <Loader2 size={22} className="animate-spin" />
+                    ) : (
+                      <Camera size={22} />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={closeVoiceLive}

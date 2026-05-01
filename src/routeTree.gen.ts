@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoRouteImport } from './routes/api/video'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
+import { Route as ApiSttRouteImport } from './routes/api/stt'
+import { Route as ApiScreenHelpRouteImport } from './routes/api/screen-help'
 import { Route as ApiImageRouteImport } from './routes/api/image'
 import { Route as ApiCustomChatRouteImport } from './routes/api/custom-chat'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -29,6 +32,21 @@ const IndexRoute = IndexRouteImport.update({
 const ApiVideoRoute = ApiVideoRouteImport.update({
   id: '/api/video',
   path: '/api/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSttRoute = ApiSttRouteImport.update({
+  id: '/api/stt',
+  path: '/api/stt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiScreenHelpRoute = ApiScreenHelpRouteImport.update({
+  id: '/api/screen-help',
+  path: '/api/screen-help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiImageRoute = ApiImageRouteImport.update({
@@ -53,6 +71,9 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
+  '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/stt': typeof ApiSttRoute
+  '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +82,9 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
+  '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/stt': typeof ApiSttRoute
+  '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
 }
 export interface FileRoutesById {
@@ -70,6 +94,9 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
+  '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/stt': typeof ApiSttRoute
+  '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +107,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/custom-chat'
     | '/api/image'
+    | '/api/screen-help'
+    | '/api/stt'
+    | '/api/tts'
     | '/api/video'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +118,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/custom-chat'
     | '/api/image'
+    | '/api/screen-help'
+    | '/api/stt'
+    | '/api/tts'
     | '/api/video'
   id:
     | '__root__'
@@ -96,6 +129,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/custom-chat'
     | '/api/image'
+    | '/api/screen-help'
+    | '/api/stt'
+    | '/api/tts'
     | '/api/video'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +141,9 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCustomChatRoute: typeof ApiCustomChatRoute
   ApiImageRoute: typeof ApiImageRoute
+  ApiScreenHelpRoute: typeof ApiScreenHelpRoute
+  ApiSttRoute: typeof ApiSttRoute
+  ApiTtsRoute: typeof ApiTtsRoute
   ApiVideoRoute: typeof ApiVideoRoute
 }
 
@@ -129,6 +168,27 @@ declare module '@tanstack/react-router' {
       path: '/api/video'
       fullPath: '/api/video'
       preLoaderRoute: typeof ApiVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stt': {
+      id: '/api/stt'
+      path: '/api/stt'
+      fullPath: '/api/stt'
+      preLoaderRoute: typeof ApiSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/screen-help': {
+      id: '/api/screen-help'
+      path: '/api/screen-help'
+      fullPath: '/api/screen-help'
+      preLoaderRoute: typeof ApiScreenHelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/image': {
@@ -161,6 +221,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCustomChatRoute: ApiCustomChatRoute,
   ApiImageRoute: ApiImageRoute,
+  ApiScreenHelpRoute: ApiScreenHelpRoute,
+  ApiSttRoute: ApiSttRoute,
+  ApiTtsRoute: ApiTtsRoute,
   ApiVideoRoute: ApiVideoRoute,
 }
 export const routeTree = rootRouteImport
