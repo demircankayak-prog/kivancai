@@ -261,6 +261,16 @@ function Index() {
   const voiceRecogRef = useRef<BrowserSpeechRecognition | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const vadRafRef = useRef<number | null>(null);
+  const [screenHelpLoading, setScreenHelpLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
