@@ -56,7 +56,13 @@ type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
   lang: string;
   interimResults: boolean;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  continuous?: boolean;
+  onresult:
+    | ((event: {
+        resultIndex: number;
+        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+      }) => void)
+    | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
   start: () => void;
@@ -541,26 +547,79 @@ function Index() {
   };
 
   // ===== Canlı sesli sohbet (Web Speech + Lovable AI + TTS) =====
+  const pickBestTurkishVoice = (): SpeechSynthesisVoice | null => {
+    const synth = window.speechSynthesis;
+    if (!synth) return null;
+    const voices = synth.getVoices();
+    if (!voices.length) return null;
+    const tr = voices.filter((v) => v.lang?.toLowerCase().startsWith("tr"));
+    if (!tr.length) return null;
+    // Tercih sırası: Google > Microsoft (Tolga/Yelda/Filiz) > Apple (Yelda) > diğer
+    const score = (v: SpeechSynthesisVoice) => {
+      const n = `${v.name} ${v.voiceURI}`.toLowerCase();
+      let s = 0;
+      if (n.includes("google")) s += 100;
+      if (n.includes("natural") || n.includes("neural") || n.includes("online")) s += 60;
+      if (n.includes("yelda") || n.includes("tolga") || n.includes("filiz") || n.includes("emel")) s += 40;
+      if (n.includes("microsoft")) s += 30;
+      if (v.localService) s += 5;
+      return s;
+    };
+    return tr.sort((a, b) => score(b) - score(a))[0] ?? tr[0];
+  };
+
   const speakReply = (text: string) => {
     try {
       const synth = window.speechSynthesis;
-      if (!synth) return;
+      if (!synth || !text.trim()) return;
       synth.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "tr-TR";
-      utter.rate = 1.05;
-      utter.pitch = 1;
-      const voices = synth.getVoices();
-      const tr = voices.find((v) => v.lang?.toLowerCase().startsWith("tr"));
-      if (tr) utter.voice = tr;
-      utter.onstart = () => setVoiceSpeaking(true);
-      utter.onend = () => setVoiceSpeaking(false);
-      utter.onerror = () => setVoiceSpeaking(false);
-      synth.speak(utter);
+      // Cümlelere böl — daha akıcı, doğal tonlama; ilk parça hemen başlasın
+      const clean = text
+        .replace(/[*_`#>~]+/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const chunks = clean.match(/[^.!?…]+[.!?…]?/g)?.map((s) => s.trim()).filter(Boolean) || [clean];
+      const voice = pickBestTurkishVoice();
+      let started = false;
+      chunks.forEach((chunk, i) => {
+        const utter = new SpeechSynthesisUtterance(chunk);
+        utter.lang = "tr-TR";
+        utter.rate = 1.0;
+        utter.pitch = 1.05;
+        utter.volume = 1;
+        if (voice) utter.voice = voice;
+        if (i === 0) {
+          utter.onstart = () => {
+            started = true;
+            setVoiceSpeaking(true);
+          };
+        }
+        if (i === chunks.length - 1) {
+          utter.onend = () => setVoiceSpeaking(false);
+          utter.onerror = () => setVoiceSpeaking(false);
+        }
+        synth.speak(utter);
+      });
+      // Bazı tarayıcılar onstart tetiklemeyebilir → garanti
+      setTimeout(() => {
+        if (!started) setVoiceSpeaking(true);
+      }, 100);
     } catch (e) {
       console.error("TTS error:", e);
+      setVoiceSpeaking(false);
     }
   };
+
+  // Sesleri önceden yükle (Chrome async yüklüyor)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const load = () => window.speechSynthesis.getVoices();
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => {
+      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   const askLiveAI = async (userText: string) => {
     setVoiceTranscript(userText);
@@ -635,15 +694,45 @@ function Index() {
       window.speechSynthesis?.cancel();
       const rec = new SR();
       rec.lang = "tr-TR";
-      rec.interimResults = false;
+      (rec as unknown as { continuous?: boolean }).continuous = true;
+      rec.interimResults = true;
+      let finalText = "";
+      let interimText = "";
       rec.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map((r) => r[0].transcript)
-          .join(" ")
-          .trim();
-        if (transcript) askLiveAI(transcript);
+        interimText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) finalText += r[0].transcript + " ";
+          else interimText += r[0].transcript;
+        }
+        const live = (finalText + " " + interimText).trim();
+        if (live) setVoiceTranscript(live);
+        // AI konuşurken kullanıcı söze girerse AI'ı sustur (barge-in)
+        if (interimText.trim().length > 2 && window.speechSynthesis?.speaking) {
+          window.speechSynthesis.cancel();
+          setVoiceSpeaking(false);
+        }
       };
-      rec.onend = () => setVoiceListening(false);
+      rec.onend = () => {
+        const text = finalText.trim();
+        finalText = "";
+        interimText = "";
+        if (text) {
+          askLiveAI(text);
+        } else if (voiceLiveOpen) {
+          // Sessizlik nedeniyle bitti → tekrar başlat
+          try {
+            rec.start();
+            return;
+          } catch {
+            /* ignore */
+          }
+        }
+        setVoiceListening(false);
+      };
+      (rec as unknown as { onerror?: (e: unknown) => void }).onerror = (e: unknown) => {
+        console.warn("STT error:", e);
+      };
       rec.start();
       voiceRecogRef.current = rec;
       setVoiceListening(true);
