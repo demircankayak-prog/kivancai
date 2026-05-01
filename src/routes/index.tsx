@@ -35,6 +35,7 @@ import {
   AudioLines,
   MonitorUp,
   PhoneOff,
+  Camera,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/kivancai-logo-circle.png";
@@ -843,6 +844,45 @@ function Index() {
       micStreamRef.current = null;
     }
     setVoiceListening(false);
+  };
+
+  // Ekrandan kare yakala → Vision'a gönder → cevap sesli okunsun
+  const captureScreenAndAsk = async (question?: string) => {
+    const video = screenVideoRef.current;
+    const stream = screenStreamRef.current;
+    if (!video || !stream) {
+      alert("Önce ekran paylaşımını başlat.");
+      return;
+    }
+    try {
+      setScreenHelpLoading(true);
+      const w = video.videoWidth || 1280;
+      const h = video.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const q =
+        question ||
+        voiceTranscript ||
+        "Bu ekranda ne görüyorsun, hangi butona basmalıyım?";
+      const resp = await fetch("/api/screen-help", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, question: q }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      const reply = (data?.reply || "Ekranı analiz edemedim kanka.").toString();
+      setVoiceReply(reply);
+      await speakReply(reply);
+    } catch (e) {
+      console.error("screen capture error:", e);
+    } finally {
+      setScreenHelpLoading(false);
+    }
   };
 
   const toggleScreenShare = async () => {
