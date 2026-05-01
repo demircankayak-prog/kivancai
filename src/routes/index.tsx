@@ -643,7 +643,7 @@ function Index() {
       if (!resp.ok || !resp.body) {
         const fb = "Kanka şu an cevap veremedim, tekrar dener misin?";
         setVoiceReply(fb);
-        speakReply(fb);
+        await speakReply(fb);
         return;
       }
       const reader = resp.body.getReader();
@@ -676,12 +676,12 @@ function Index() {
         }
       }
       const reply = full.trim() || "Tamamdır kanka.";
-      speakReply(reply);
+      await speakReply(reply);
     } catch (e) {
       console.error("live AI error:", e);
       const fb = "Bağlantıda küçük bir sorun oldu kanka, tekrar dener misin?";
       setVoiceReply(fb);
-      speakReply(fb);
+      await speakReply(fb);
     }
   };
 
