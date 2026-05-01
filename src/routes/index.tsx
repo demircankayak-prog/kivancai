@@ -556,80 +556,68 @@ function Index() {
     }
   };
 
-  // ===== Canlı sesli sohbet (Web Speech + Lovable AI + TTS) =====
-  const pickBestTurkishVoice = (): SpeechSynthesisVoice | null => {
-    const synth = window.speechSynthesis;
-    if (!synth) return null;
-    const voices = synth.getVoices();
-    if (!voices.length) return null;
-    const tr = voices.filter((v) => v.lang?.toLowerCase().startsWith("tr"));
-    if (!tr.length) return null;
-    // Tercih sırası: Google > Microsoft (Tolga/Yelda/Filiz) > Apple (Yelda) > diğer
-    const score = (v: SpeechSynthesisVoice) => {
-      const n = `${v.name} ${v.voiceURI}`.toLowerCase();
-      let s = 0;
-      if (n.includes("google")) s += 100;
-      if (n.includes("natural") || n.includes("neural") || n.includes("online")) s += 60;
-      if (n.includes("yelda") || n.includes("tolga") || n.includes("filiz") || n.includes("emel")) s += 40;
-      if (n.includes("microsoft")) s += 30;
-      if (v.localService) s += 5;
-      return s;
-    };
-    return tr.sort((a, b) => score(b) - score(a))[0] ?? tr[0];
+  // ===== Canlı sesli sohbet (ElevenLabs Scribe + Turbo TTS) =====
+  const stopTts = () => {
+    try {
+      ttsAbortRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    if (ttsAudioRef.current) {
+      try {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.src = "";
+      } catch {
+        /* ignore */
+      }
+      ttsAudioRef.current = null;
+    }
+    setVoiceSpeaking(false);
   };
 
-  const speakReply = (text: string) => {
+  const speakReply = async (text: string) => {
+    const clean = text
+      .replace(/[*_`#>~]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) return;
+    stopTts();
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
     try {
-      const synth = window.speechSynthesis;
-      if (!synth || !text.trim()) return;
-      synth.cancel();
-      // Cümlelere böl — daha akıcı, doğal tonlama; ilk parça hemen başlasın
-      const clean = text
-        .replace(/[*_`#>~]+/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      const chunks = clean.match(/[^.!?…]+[.!?…]?/g)?.map((s) => s.trim()).filter(Boolean) || [clean];
-      const voice = pickBestTurkishVoice();
-      let started = false;
-      chunks.forEach((chunk, i) => {
-        const utter = new SpeechSynthesisUtterance(chunk);
-        utter.lang = "tr-TR";
-        utter.rate = 1.0;
-        utter.pitch = 1.05;
-        utter.volume = 1;
-        if (voice) utter.voice = voice;
-        if (i === 0) {
-          utter.onstart = () => {
-            started = true;
-            setVoiceSpeaking(true);
-          };
-        }
-        if (i === chunks.length - 1) {
-          utter.onend = () => setVoiceSpeaking(false);
-          utter.onerror = () => setVoiceSpeaking(false);
-        }
-        synth.speak(utter);
+      setVoiceSpeaking(true);
+      const resp = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean }),
+        signal: ctrl.signal,
       });
-      // Bazı tarayıcılar onstart tetiklemeyebilir → garanti
-      setTimeout(() => {
-        if (!started) setVoiceSpeaking(true);
-      }, 100);
+      if (!resp.ok) {
+        console.error("TTS http error", resp.status);
+        setVoiceSpeaking(false);
+        return;
+      }
+      const blob = await resp.blob();
+      if (ctrl.signal.aborted) return;
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+      audio.onended = () => {
+        setVoiceSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setVoiceSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play().catch(() => undefined);
     } catch (e) {
-      console.error("TTS error:", e);
+      if ((e as { name?: string })?.name !== "AbortError") {
+        console.error("TTS error:", e);
+      }
       setVoiceSpeaking(false);
     }
   };
-
-  // Sesleri önceden yükle (Chrome async yüklüyor)
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    const load = () => window.speechSynthesis.getVoices();
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
-    return () => {
-      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
 
   const askLiveAI = async (userText: string) => {
     setVoiceTranscript(userText);
