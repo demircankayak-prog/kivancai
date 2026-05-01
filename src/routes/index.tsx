@@ -2061,6 +2061,22 @@ function Index() {
                 >
                   <MonitorUp size={22} />
                 </button>
+                {screenSharing && (
+                  <button
+                    type="button"
+                    disabled={screenHelpLoading}
+                    onClick={() => captureScreenAndAsk()}
+                    className="grid h-14 w-14 place-items-center rounded-full border border-brand bg-brand text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    aria-label="Ekrandan yardım iste"
+                    title="Ekrandan kare al, KıvançAI sana sesli anlatsın"
+                  >
+                    {screenHelpLoading ? (
+                      <Loader2 size={22} className="animate-spin" />
+                    ) : (
+                      <Camera size={22} />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={closeVoiceLive}
