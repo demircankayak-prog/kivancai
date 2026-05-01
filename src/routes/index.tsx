@@ -874,7 +874,7 @@ function Index() {
 
   const closeVoiceLive = () => {
     stopVoiceListen();
-    window.speechSynthesis?.cancel();
+    stopTts();
     if (screenSharing) {
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
