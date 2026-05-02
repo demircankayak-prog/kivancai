@@ -265,6 +265,7 @@ function Index() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAbortRef = useRef<AbortController | null>(null);
   const liveRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const liveRecognitionPausedRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const micStreamRef = useRef<MediaStream | null>(null);
