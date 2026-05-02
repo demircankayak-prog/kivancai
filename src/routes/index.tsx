@@ -938,6 +938,7 @@ function Index() {
   };
 
   const closeVoiceLive = () => {
+    voiceLiveOpenRef.current = false;
     stopVoiceListen();
     stopTts();
     if (screenSharing) {
