@@ -580,6 +580,7 @@ function Index() {
       ttsAudioRef.current = null;
     }
     setVoiceSpeaking(false);
+    liveRecognitionPausedRef.current = false;
   };
 
   const startBrowserLiveRecognition = () => {
@@ -927,6 +928,8 @@ function Index() {
   };
 
   const stopVoiceListen = () => {
+    voiceLiveOpenRef.current = false;
+    liveRecognitionPausedRef.current = false;
     try {
       liveRecognitionRef.current?.stop();
     } catch {
