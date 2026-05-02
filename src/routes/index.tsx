@@ -608,7 +608,7 @@ function Index() {
     };
     rec.onerror = () => setVoiceListening(false);
     rec.onend = () => {
-      if (!voiceLiveOpenRef.current) {
+      if (!voiceLiveOpenRef.current || liveRecognitionPausedRef.current) {
         setVoiceListening(false);
         return;
       }
@@ -631,6 +631,12 @@ function Index() {
       .trim();
     if (!clean) return;
     stopTts();
+    liveRecognitionPausedRef.current = true;
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
     const ctrl = new AbortController();
     ttsAbortRef.current = ctrl;
     try {
@@ -654,10 +660,14 @@ function Index() {
       audio.onended = () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
       audio.onerror = () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
       await audio.play().catch(() => undefined);
     } catch (e) {
@@ -665,6 +675,7 @@ function Index() {
         console.error("TTS error:", e);
       }
       setVoiceSpeaking(false);
+      liveRecognitionPausedRef.current = false;
     }
   };
 
