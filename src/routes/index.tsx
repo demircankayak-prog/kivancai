@@ -581,6 +581,48 @@ function Index() {
     setVoiceSpeaking(false);
   };
 
+  const startBrowserLiveRecognition = () => {
+    const speechWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    };
+    const SR = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!SR) return false;
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    const rec = new SR();
+    rec.lang = "tr-TR";
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((result) => result[0]?.transcript || "")
+        .join(" ")
+        .trim();
+      if (transcript) void askLiveAI(transcript);
+    };
+    rec.onerror = () => setVoiceListening(false);
+    rec.onend = () => {
+      if (!voiceLiveOpenRef.current) {
+        setVoiceListening(false);
+        return;
+      }
+      try {
+        rec.start();
+      } catch {
+        setVoiceListening(false);
+      }
+    };
+    liveRecognitionRef.current = rec;
+    rec.start();
+    setVoiceListening(true);
+    return true;
+  };
+
   const speakReply = async (text: string) => {
     const clean = text
       .replace(/[*_`#>~]+/g, "")
