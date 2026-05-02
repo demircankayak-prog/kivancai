@@ -255,6 +255,7 @@ function Index() {
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const voiceLiveOpenRef = useRef(false);
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceReply, setVoiceReply] = useState("");
@@ -725,6 +726,19 @@ function Index() {
       alert("Tarayıcın mikrofonu desteklemiyor.");
       return;
     }
+    voiceLiveOpenRef.current = true;
+    // AudioContext'i kullanıcı gesture'ı içinde oluştur/resume et — Chrome aksi halde suspend bırakır
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx && !audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      if (audioCtxRef.current?.state === "suspended") {
+        await audioCtxRef.current.resume();
+      }
+    } catch {
+      /* ignore */
+    }
     try {
       stopTts();
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -758,8 +772,8 @@ function Index() {
         if (chunks.length > 0) {
           await transcribeAndAsk(blob);
         }
-        // Yeni segment için tekrar başlat
-        if (voiceLiveOpen && micStreamRef.current) {
+        // Yeni segment için tekrar başlat (ref ile stale closure'ı önle)
+        if (voiceLiveOpenRef.current && micStreamRef.current) {
           try {
             audioChunksRef.current = [];
             mr.start();
@@ -774,9 +788,17 @@ function Index() {
       mr.start();
       armSilenceDetector();
       setVoiceListening(true);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("voice listen error:", e);
       setVoiceListening(false);
+      const name = (e as { name?: string })?.name;
+      if (name === "NotAllowedError") {
+        alert("Mikrofon izni reddedildi. Chrome'da adres çubuğu → 🔒 → Mikrofon → İzin Ver.");
+      } else if (name === "NotFoundError") {
+        alert("Mikrofon bulunamadı.");
+      } else if (name === "NotReadableError") {
+        alert("Mikrofon başka bir uygulama tarafından kullanılıyor.");
+      }
     }
   };
 
@@ -916,6 +938,7 @@ function Index() {
   };
 
   const closeVoiceLive = () => {
+    voiceLiveOpenRef.current = false;
     stopVoiceListen();
     stopTts();
     if (screenSharing) {
@@ -1814,8 +1837,10 @@ function Index() {
                   <button
                     type="button"
                     onClick={() => {
+                      // Gesture context'i KORU: getUserMedia + AudioContext
+                      // mutlaka kullanıcı tıklamasının senkron zincirinde başlasın.
                       setVoiceLiveOpen(true);
-                      setTimeout(() => startVoiceListen(), 250);
+                      void startVoiceListen();
                     }}
                     aria-label="Canlı sesli sohbet"
                     title="Canlı sesli sohbet (yapay zeka ile konuş)"
