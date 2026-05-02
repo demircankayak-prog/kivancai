@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// ElevenLabs Scribe v2 — Türkçe konuşma tanıma
+// ElevenLabs Scribe — Türkçe konuşma tanıma
 export const Route = createFileRoute("/api/stt")({
   server: {
     handlers: {
@@ -17,9 +17,12 @@ export const Route = createFileRoute("/api/stt")({
             return Response.json({ error: "Ses dosyası gerekli" }, { status: 400 });
           }
 
+          const contentType = (file as Blob).type || "audio/webm";
+          const extension = contentType.includes("mp4") || contentType.includes("m4a") ? "m4a" : "webm";
+
           const fd = new FormData();
-          fd.append("file", file, "audio.webm");
-          fd.append("model_id", "scribe_v2");
+          fd.append("file", file, `audio.${extension}`);
+          fd.append("model_id", "scribe_v1");
           fd.append("language_code", "tur");
           fd.append("tag_audio_events", "false");
           fd.append("diarize", "false");
@@ -32,7 +35,7 @@ export const Route = createFileRoute("/api/stt")({
           if (!resp.ok) {
             const t = await resp.text();
             console.error("STT error:", resp.status, t);
-            return Response.json({ error: "Konuşma tanınamadı" }, { status: 502 });
+            return Response.json({ error: "Konuşma tanınamadı", detail: t.slice(0, 300) }, { status: 502 });
           }
           const data = await resp.json();
           return Response.json({ text: (data.text || "").trim() });

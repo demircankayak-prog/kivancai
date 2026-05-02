@@ -264,6 +264,8 @@ function Index() {
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAbortRef = useRef<AbortController | null>(null);
+  const liveRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const liveRecognitionPausedRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -578,6 +580,49 @@ function Index() {
       ttsAudioRef.current = null;
     }
     setVoiceSpeaking(false);
+    liveRecognitionPausedRef.current = false;
+  };
+
+  const startBrowserLiveRecognition = () => {
+    const speechWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    };
+    const SR = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!SR) return false;
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    const rec = new SR();
+    rec.lang = "tr-TR";
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((result) => result[0]?.transcript || "")
+        .join(" ")
+        .trim();
+      if (transcript) void askLiveAI(transcript);
+    };
+    rec.onerror = () => setVoiceListening(false);
+    rec.onend = () => {
+      if (!voiceLiveOpenRef.current || liveRecognitionPausedRef.current) {
+        setVoiceListening(false);
+        return;
+      }
+      try {
+        rec.start();
+      } catch {
+        setVoiceListening(false);
+      }
+    };
+    liveRecognitionRef.current = rec;
+    rec.start();
+    setVoiceListening(true);
+    return true;
   };
 
   const speakReply = async (text: string) => {
@@ -587,6 +632,12 @@ function Index() {
       .trim();
     if (!clean) return;
     stopTts();
+    liveRecognitionPausedRef.current = true;
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
     const ctrl = new AbortController();
     ttsAbortRef.current = ctrl;
     try {
@@ -610,10 +661,14 @@ function Index() {
       audio.onended = () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
       audio.onerror = () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
       await audio.play().catch(() => undefined);
     } catch (e) {
@@ -621,6 +676,7 @@ function Index() {
         console.error("TTS error:", e);
       }
       setVoiceSpeaking(false);
+      liveRecognitionPausedRef.current = false;
     }
   };
 
@@ -689,9 +745,14 @@ function Index() {
     if (blob.size < 2000) return; // çok kısa → sessizlik
     try {
       const fd = new FormData();
-      fd.append("file", blob, "audio.webm");
+      const extension = blob.type.includes("mp4") || blob.type.includes("m4a") ? "m4a" : "webm";
+      fd.append("file", blob, `audio.${extension}`);
       const resp = await fetch("/api/stt", { method: "POST", body: fd });
       const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        console.error("STT http error", resp.status, data);
+        return;
+      }
       const text = (data?.text || "").trim();
       if (!text) return;
       setVoiceTranscript(text);
@@ -727,6 +788,9 @@ function Index() {
       return;
     }
     voiceLiveOpenRef.current = true;
+    stopTts();
+    // Chrome'da canlı konuşma için en sağlam yol: SpeechRecognition'ı direkt tıklama anında başlatmak.
+    if (startBrowserLiveRecognition()) return;
     // AudioContext'i kullanıcı gesture'ı içinde oluştur/resume et — Chrome aksi halde suspend bırakır
     try {
       const AudioCtx =
@@ -740,7 +804,6 @@ function Index() {
       /* ignore */
     }
     try {
-      stopTts();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -755,8 +818,10 @@ function Index() {
             ? "audio/webm;codecs=opus"
             : MediaRecorder.isTypeSupported("audio/webm")
               ? "audio/webm"
-              : MediaRecorder.isTypeSupported("audio/mp4")
-                ? "audio/mp4"
+              : MediaRecorder.isTypeSupported("audio/mp4;codecs=mp4a.40.2")
+                ? "audio/mp4;codecs=mp4a.40.2"
+                : MediaRecorder.isTypeSupported("audio/mp4")
+                  ? "audio/mp4"
                 : "")) || "";
       const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mr;
@@ -863,6 +928,14 @@ function Index() {
   };
 
   const stopVoiceListen = () => {
+    voiceLiveOpenRef.current = false;
+    liveRecognitionPausedRef.current = false;
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    liveRecognitionRef.current = null;
     stopRecorder(true);
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach((t) => t.stop());

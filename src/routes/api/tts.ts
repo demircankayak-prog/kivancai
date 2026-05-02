@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// ElevenLabs Turbo v2.5 — düşük gecikme, doğal Türkçe TTS
-// Varsayılan ses: Daniel (onwK4e9ZLuTAKqWW03F9) — sıcak erkek sesi
-const DEFAULT_VOICE = "onwK4e9ZLuTAKqWW03F9";
+// ElevenLabs Flash v2.5 — düşük gecikme, doğal Türkçe TTS
+// Varsayılan ses: Aria (9BWtsMINqrJLrRacOk9x) — Gemini/ChatGPT tarzına daha yakın, yumuşak ve net.
+const DEFAULT_VOICE = "9BWtsMINqrJLrRacOk9x";
 
 export const Route = createFileRoute("/api/tts")({
   server: {
@@ -37,13 +37,13 @@ export const Route = createFileRoute("/api/tts")({
               },
               body: JSON.stringify({
                 text: cleanText,
-                model_id: "eleven_turbo_v2_5",
+                model_id: "eleven_flash_v2_5",
                 voice_settings: {
-                  stability: 0.45,
-                  similarity_boost: 0.8,
-                  style: 0.35,
-                  use_speaker_boost: true,
-                  speed: 1.0,
+                  stability: 0.62,
+                  similarity_boost: 0.88,
+                  style: 0.18,
+                  use_speaker_boost: false,
+                  speed: 0.96,
                 },
               }),
             },
