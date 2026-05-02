@@ -775,6 +775,9 @@ function Index() {
       return;
     }
     voiceLiveOpenRef.current = true;
+    stopTts();
+    // Chrome'da canlı konuşma için en sağlam yol: SpeechRecognition'ı direkt tıklama anında başlatmak.
+    if (startBrowserLiveRecognition()) return;
     // AudioContext'i kullanıcı gesture'ı içinde oluştur/resume et — Chrome aksi halde suspend bırakır
     try {
       const AudioCtx =
@@ -788,7 +791,6 @@ function Index() {
       /* ignore */
     }
     try {
-      stopTts();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -913,6 +915,12 @@ function Index() {
   };
 
   const stopVoiceListen = () => {
+    try {
+      liveRecognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    liveRecognitionRef.current = null;
     stopRecorder(true);
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach((t) => t.stop());
