@@ -1814,8 +1814,10 @@ function Index() {
                   <button
                     type="button"
                     onClick={() => {
+                      // Gesture context'i KORU: getUserMedia + AudioContext
+                      // mutlaka kullanıcı tıklamasının senkron zincirinde başlasın.
                       setVoiceLiveOpen(true);
-                      setTimeout(() => startVoiceListen(), 250);
+                      void startVoiceListen();
                     }}
                     aria-label="Canlı sesli sohbet"
                     title="Canlı sesli sohbet (yapay zeka ile konuş)"
