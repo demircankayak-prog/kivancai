@@ -689,9 +689,14 @@ function Index() {
     if (blob.size < 2000) return; // çok kısa → sessizlik
     try {
       const fd = new FormData();
-      fd.append("file", blob, "audio.webm");
+      const extension = blob.type.includes("mp4") || blob.type.includes("m4a") ? "m4a" : "webm";
+      fd.append("file", blob, `audio.${extension}`);
       const resp = await fetch("/api/stt", { method: "POST", body: fd });
       const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        console.error("STT http error", resp.status, data);
+        return;
+      }
       const text = (data?.text || "").trim();
       if (!text) return;
       setVoiceTranscript(text);
@@ -755,8 +760,10 @@ function Index() {
             ? "audio/webm;codecs=opus"
             : MediaRecorder.isTypeSupported("audio/webm")
               ? "audio/webm"
-              : MediaRecorder.isTypeSupported("audio/mp4")
-                ? "audio/mp4"
+              : MediaRecorder.isTypeSupported("audio/mp4;codecs=mp4a.40.2")
+                ? "audio/mp4;codecs=mp4a.40.2"
+                : MediaRecorder.isTypeSupported("audio/mp4")
+                  ? "audio/mp4"
                 : "")) || "";
       const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mr;
