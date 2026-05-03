@@ -739,6 +739,10 @@ function Index() {
   const askLiveAI = async (userText: string) => {
     setVoiceTranscript(userText);
     setVoiceReply("…");
+    if (screenSharing && isScreenHelpRequest(userText)) {
+      await captureScreenAndAsk(userText);
+      return;
+    }
     try {
       const resp = await fetch("/api/chat", {
         method: "POST",
