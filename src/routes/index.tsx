@@ -716,9 +716,12 @@ function Index() {
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
-      audio.onerror = () => {
+      audio.onerror = async () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        setVoiceSpeaking(true);
+        await speakWithBrowserVoice(clean);
+        setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
@@ -731,7 +734,11 @@ function Index() {
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       }
     } catch (e) {
-      if ((e as { name?: string })?.name !== "AbortError") {
+      if ((e as { name?: string })?.name === "AbortError") {
+        setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        return;
+      } else {
         console.error("TTS error:", e);
       }
       setVoiceSpeaking(false);
