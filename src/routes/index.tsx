@@ -603,7 +603,11 @@ function Index() {
       try {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(clean);
+        let started = false;
         const pickVoice = () => {
+          if (started) return;
+          started = true;
+          window.speechSynthesis.onvoiceschanged = null;
           const voices = window.speechSynthesis.getVoices();
           const trVoice = voices.find((v) => /tr|turkish|türk/i.test(`${v.lang} ${v.name}`));
           const naturalVoice = voices.find((v) => /google|microsoft|zira|natural|online/i.test(v.name));
@@ -694,6 +698,7 @@ function Index() {
       });
       if (!resp.ok) {
         console.error("TTS http error", resp.status);
+        setVoiceSpeaking(true);
         await speakWithBrowserVoice(clean);
         setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
@@ -731,7 +736,9 @@ function Index() {
       }
       setVoiceSpeaking(false);
       liveRecognitionPausedRef.current = false;
+      setVoiceSpeaking(true);
       await speakWithBrowserVoice(clean);
+      setVoiceSpeaking(false);
       if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     }
   };
