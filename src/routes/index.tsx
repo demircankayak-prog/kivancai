@@ -1139,6 +1139,12 @@ function Index() {
     }
   };
 
+  useEffect(() => {
+    if (!screenSharing || !screenVideoRef.current || !screenStreamRef.current) return;
+    screenVideoRef.current.srcObject = screenStreamRef.current;
+    screenVideoRef.current.play().catch(() => undefined);
+  }, [screenSharing]);
+
   const closeVoiceLive = () => {
     voiceLiveOpenRef.current = false;
     stopVoiceListen();
