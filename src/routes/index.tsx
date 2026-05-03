@@ -1112,6 +1112,7 @@ function Index() {
       screenStreamRef.current = null;
       if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
       setScreenSharing(false);
+      setScreenCropPreview(null);
       return;
     }
     try {
@@ -1126,6 +1127,7 @@ function Index() {
       stream.getVideoTracks()[0].onended = () => {
         setScreenSharing(false);
         screenStreamRef.current = null;
+        setScreenCropPreview(null);
       };
       setScreenSharing(true);
     } catch (e) {
