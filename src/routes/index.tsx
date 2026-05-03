@@ -2267,6 +2267,19 @@ function Index() {
                 />
               )}
 
+              {screenCropPreview && (
+                <div className="w-full overflow-hidden rounded-xl border border-brand/40 bg-brand/5 xl:hidden">
+                  <img
+                    src={screenCropPreview.image}
+                    alt={screenCropPreview.label}
+                    className="max-h-64 w-full object-contain"
+                  />
+                  <p className="border-t border-brand/20 px-3 py-2 text-xs font-semibold text-brand">
+                    {screenCropPreview.label}
+                  </p>
+                </div>
+              )}
+
               <div className="flex w-full items-center justify-center gap-3">
                 <button
                   type="button"
@@ -2322,6 +2335,21 @@ function Index() {
               </div>
             </div>
           </div>
+          {screenCropPreview && (
+            <aside className="fixed right-4 top-1/2 hidden w-80 -translate-y-1/2 overflow-hidden rounded-2xl border border-brand/40 bg-card shadow-2xl xl:block">
+              <img
+                src={screenCropPreview.image}
+                alt={screenCropPreview.label}
+                className="max-h-[55vh] w-full object-contain"
+              />
+              <div className="border-t border-brand/20 p-3">
+                <p className="text-xs font-bold text-brand">{screenCropPreview.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {screenCropPreview.reply}
+                </p>
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </main>
