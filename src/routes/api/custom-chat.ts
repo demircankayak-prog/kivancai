@@ -18,7 +18,7 @@ const BodySchema = z.object({
 });
 
 const SYSTEM =
-  "Sen Kıvanç AI içinde çalışan net, hızlı ve doğal bir sohbet asistanısın. Türkçe konuşulursa Türkçe cevap ver.";
+  "Sen Kıvanç AI içinde çalışan net, hızlı ve doğal bir sohbet asistanısın. Türkçe konuşulursa Türkçe cevap ver. Kodlama, oyun yapımı, web/app geliştirme isteklerinde profesyonel davran: tam çalışan kod, mimari, performans, hata durumları ve çalıştırma adımlarını ver. HTML/CSS/JS istenirse doğrudan kopyalanabilir tek dosya kod yaz.";
 
 const contentToText = (content: unknown): string => {
   if (typeof content === "string") return content.slice(0, 20000);

@@ -45,6 +45,11 @@ export const Route = createFileRoute("/")({
 });
 
 type Attachment = { kind: "image" | "video"; url: string; name?: string };
+type ScreenCropPreview = {
+  image: string;
+  label: string;
+  reply: string;
+};
 type Msg = {
   role: "user" | "assistant";
   content: string;
@@ -52,6 +57,7 @@ type Msg = {
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
   videoWatermark?: boolean; // ilk videoda false, sonrakilerde true
+  screenCrop?: ScreenCropPreview;
 };
 type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
@@ -260,6 +266,7 @@ function Index() {
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceReply, setVoiceReply] = useState("");
   const [screenSharing, setScreenSharing] = useState(false);
+  const [screenCropPreview, setScreenCropPreview] = useState<ScreenCropPreview | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -579,8 +586,49 @@ function Index() {
       }
       ttsAudioRef.current = null;
     }
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* ignore */
+    }
     setVoiceSpeaking(false);
     liveRecognitionPausedRef.current = false;
+  };
+
+  const speakWithBrowserVoice = async (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+    const clean = text.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return false;
+    return new Promise<boolean>((resolve) => {
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(clean);
+        let started = false;
+        const pickVoice = () => {
+          if (started) return;
+          started = true;
+          window.speechSynthesis.onvoiceschanged = null;
+          const voices = window.speechSynthesis.getVoices();
+          const trVoice = voices.find((v) => /tr|turkish|türk/i.test(`${v.lang} ${v.name}`));
+          const naturalVoice = voices.find((v) => /google|microsoft|zira|natural|online/i.test(v.name));
+          utter.voice = trVoice || naturalVoice || voices[0] || null;
+          utter.lang = utter.voice?.lang || "tr-TR";
+          utter.rate = 0.98;
+          utter.pitch = 1.02;
+          utter.volume = 1;
+          utter.onend = () => resolve(true);
+          utter.onerror = () => resolve(false);
+          window.speechSynthesis.speak(utter);
+        };
+        if (window.speechSynthesis.getVoices().length) pickVoice();
+        else {
+          window.speechSynthesis.onvoiceschanged = pickVoice;
+          window.setTimeout(pickVoice, 250);
+        }
+      } catch {
+        resolve(false);
+      }
+    });
   };
 
   const startBrowserLiveRecognition = () => {
@@ -605,7 +653,10 @@ function Index() {
         .map((result) => result[0]?.transcript || "")
         .join(" ")
         .trim();
-      if (transcript) void askLiveAI(transcript);
+      if (transcript) {
+        liveRecognitionPausedRef.current = true;
+        void askLiveAI(transcript);
+      }
     };
     rec.onerror = () => setVoiceListening(false);
     rec.onend = () => {
@@ -650,7 +701,11 @@ function Index() {
       });
       if (!resp.ok) {
         console.error("TTS http error", resp.status);
+        setVoiceSpeaking(true);
+        await speakWithBrowserVoice(clean);
         setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
         return;
       }
       const blob = await resp.blob();
@@ -664,25 +719,47 @@ function Index() {
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
-      audio.onerror = () => {
+      audio.onerror = async () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
+        setVoiceSpeaking(true);
+        await speakWithBrowserVoice(clean);
+        setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
-      await audio.play().catch(() => undefined);
+      const played = await audio.play().then(() => true).catch(() => false);
+      if (!played) {
+        URL.revokeObjectURL(url);
+        await speakWithBrowserVoice(clean);
+        setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
+      }
     } catch (e) {
-      if ((e as { name?: string })?.name !== "AbortError") {
+      if ((e as { name?: string })?.name === "AbortError") {
+        setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        return;
+      } else {
         console.error("TTS error:", e);
       }
       setVoiceSpeaking(false);
       liveRecognitionPausedRef.current = false;
+      setVoiceSpeaking(true);
+      await speakWithBrowserVoice(clean);
+      setVoiceSpeaking(false);
+      if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     }
   };
 
   const askLiveAI = async (userText: string) => {
     setVoiceTranscript(userText);
     setVoiceReply("…");
+    if (screenSharing && isScreenHelpRequest(userText)) {
+      await captureScreenAndAsk(userText);
+      return;
+    }
     try {
       const resp = await fetch("/api/chat", {
         method: "POST",
@@ -760,6 +837,40 @@ function Index() {
     } catch (e) {
       console.error("STT call error:", e);
     }
+  };
+
+  const isScreenHelpRequest = (text: string) => {
+    const t = text.toLowerCase();
+    return (
+      t.includes("ekran") ||
+      t.includes("buton") ||
+      t.includes("düğme") ||
+      t.includes("nerede") ||
+      t.includes("kırp") ||
+      t.includes("crop") ||
+      t.includes("gösterir misin") ||
+      t.includes("göster")
+    );
+  };
+
+  const makeScreenCrop = (
+    source: HTMLCanvasElement,
+    crop: { x: number; y: number; w: number; h: number },
+  ) => {
+    const sx = Math.max(0, Math.floor(source.width * crop.x));
+    const sy = Math.max(0, Math.floor(source.height * crop.y));
+    const sw = Math.max(80, Math.min(source.width - sx, Math.floor(source.width * crop.w)));
+    const sh = Math.max(80, Math.min(source.height - sy, Math.floor(source.height * crop.h)));
+    const out = document.createElement("canvas");
+    out.width = sw;
+    out.height = sh;
+    const outCtx = out.getContext("2d");
+    if (!outCtx) return null;
+    outCtx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+    outCtx.strokeStyle = "rgba(125, 211, 252, 0.95)";
+    outCtx.lineWidth = Math.max(4, Math.round(Math.min(sw, sh) * 0.012));
+    outCtx.strokeRect(4, 4, sw - 8, sh - 8);
+    return out.toDataURL("image/jpeg", 0.92);
   };
 
   const stopRecorder = (silent?: boolean) => {
@@ -950,6 +1061,7 @@ function Index() {
     const stream = screenStreamRef.current;
     if (!video || !stream) {
       alert("Önce ekran paylaşımını başlat.");
+      liveRecognitionPausedRef.current = false;
       return;
     }
     try {
@@ -960,7 +1072,11 @@ function Index() {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) {
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
+        return;
+      }
       ctx.drawImage(video, 0, 0, w, h);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       const q =
@@ -974,10 +1090,27 @@ function Index() {
       });
       const data = await resp.json().catch(() => ({}));
       const reply = (data?.reply || "Ekranı analiz edemedim kanka.").toString();
+      const crop = data?.crop as { x?: number; y?: number; w?: number; h?: number } | null;
+      const croppedImage =
+        crop &&
+        [crop.x, crop.y, crop.w, crop.h].every((n) => typeof n === "number" && Number.isFinite(n))
+          ? makeScreenCrop(canvas, crop as { x: number; y: number; w: number; h: number })
+          : null;
+      if (croppedImage) {
+        const preview = {
+          image: croppedImage,
+          label: (data?.label || "Bulduğum ekran bölgesi").toString(),
+          reply,
+        };
+        setScreenCropPreview(preview);
+        setMessages((p) => [...p, { role: "assistant", content: reply, screenCrop: preview }]);
+      }
       setVoiceReply(reply);
       await speakReply(reply);
     } catch (e) {
       console.error("screen capture error:", e);
+      liveRecognitionPausedRef.current = false;
+      if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     } finally {
       setScreenHelpLoading(false);
     }
@@ -989,6 +1122,7 @@ function Index() {
       screenStreamRef.current = null;
       if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
       setScreenSharing(false);
+      setScreenCropPreview(null);
       return;
     }
     try {
@@ -1003,12 +1137,19 @@ function Index() {
       stream.getVideoTracks()[0].onended = () => {
         setScreenSharing(false);
         screenStreamRef.current = null;
+        setScreenCropPreview(null);
       };
       setScreenSharing(true);
     } catch (e) {
       console.error("screen share error:", e);
     }
   };
+
+  useEffect(() => {
+    if (!screenSharing || !screenVideoRef.current || !screenStreamRef.current) return;
+    screenVideoRef.current.srcObject = screenStreamRef.current;
+    screenVideoRef.current.play().catch(() => undefined);
+  }, [screenSharing]);
 
   const closeVoiceLive = () => {
     voiceLiveOpenRef.current = false;
@@ -1019,6 +1160,7 @@ function Index() {
       screenStreamRef.current = null;
       setScreenSharing(false);
     }
+    setScreenCropPreview(null);
     setVoiceLiveOpen(false);
     setVoiceTranscript("");
     setVoiceReply("");
@@ -1541,6 +1683,18 @@ function Index() {
                           >
                             ⬇ İndir
                           </a>
+                        </div>
+                      )}
+                      {m.screenCrop && (
+                        <div className="mb-2 overflow-hidden rounded-lg border border-brand/40 bg-brand/5">
+                          <img
+                            src={m.screenCrop.image}
+                            alt={m.screenCrop.label}
+                            className="max-h-80 w-full object-contain"
+                          />
+                          <p className="border-t border-brand/20 px-3 py-2 text-xs font-medium text-brand">
+                            {m.screenCrop.label}
+                          </p>
                         </div>
                       )}
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
@@ -2131,6 +2285,19 @@ function Index() {
                 />
               )}
 
+              {screenCropPreview && (
+                <div className="w-full overflow-hidden rounded-xl border border-brand/40 bg-brand/5 xl:hidden">
+                  <img
+                    src={screenCropPreview.image}
+                    alt={screenCropPreview.label}
+                    className="max-h-64 w-full object-contain"
+                  />
+                  <p className="border-t border-brand/20 px-3 py-2 text-xs font-semibold text-brand">
+                    {screenCropPreview.label}
+                  </p>
+                </div>
+              )}
+
               <div className="flex w-full items-center justify-center gap-3">
                 <button
                   type="button"
@@ -2186,6 +2353,21 @@ function Index() {
               </div>
             </div>
           </div>
+          {screenCropPreview && (
+            <aside className="fixed right-4 top-1/2 hidden w-80 -translate-y-1/2 overflow-hidden rounded-2xl border border-brand/40 bg-card shadow-2xl xl:block">
+              <img
+                src={screenCropPreview.image}
+                alt={screenCropPreview.label}
+                className="max-h-[55vh] w-full object-contain"
+              />
+              <div className="border-t border-brand/20 p-3">
+                <p className="text-xs font-bold text-brand">{screenCropPreview.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {screenCropPreview.reply}
+                </p>
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </main>
