@@ -1068,6 +1068,21 @@ function Index() {
       });
       const data = await resp.json().catch(() => ({}));
       const reply = (data?.reply || "Ekranı analiz edemedim kanka.").toString();
+      const crop = data?.crop as { x?: number; y?: number; w?: number; h?: number } | null;
+      const croppedImage =
+        crop &&
+        [crop.x, crop.y, crop.w, crop.h].every((n) => typeof n === "number" && Number.isFinite(n))
+          ? makeScreenCrop(canvas, crop as { x: number; y: number; w: number; h: number })
+          : null;
+      if (croppedImage) {
+        const preview = {
+          image: croppedImage,
+          label: (data?.label || "Bulduğum ekran bölgesi").toString(),
+          reply,
+        };
+        setScreenCropPreview(preview);
+        setMessages((p) => [...p, { role: "assistant", content: reply, screenCrop: preview }]);
+      }
       setVoiceReply(reply);
       await speakReply(reply);
     } catch (e) {
