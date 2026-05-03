@@ -586,6 +586,11 @@ function Index() {
       }
       ttsAudioRef.current = null;
     }
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* ignore */
+    }
     setVoiceSpeaking(false);
     liveRecognitionPausedRef.current = false;
   };
