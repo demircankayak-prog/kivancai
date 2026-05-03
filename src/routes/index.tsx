@@ -653,7 +653,10 @@ function Index() {
         .map((result) => result[0]?.transcript || "")
         .join(" ")
         .trim();
-      if (transcript) void askLiveAI(transcript);
+      if (transcript) {
+        liveRecognitionPausedRef.current = true;
+        void askLiveAI(transcript);
+      }
     };
     rec.onerror = () => setVoiceListening(false);
     rec.onend = () => {
@@ -1058,6 +1061,7 @@ function Index() {
     const stream = screenStreamRef.current;
     if (!video || !stream) {
       alert("Önce ekran paylaşımını başlat.");
+      liveRecognitionPausedRef.current = false;
       return;
     }
     try {
