@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/screen-help")({
                 {
                   role: "system",
                   content:
-                    "Sen ekran paylaşımı yardımcısısın. Kullanıcının ekranını görüyorsun. Çok kısa (1-3 cümle), doğal Türkçe konuşma diliyle, butonun nerede olduğunu (sol üst, sağ alt, ortada vs.) ve adını söyle. Bulamazsan '… butonunu göremiyorum, biraz aşağı/sağa kaydır' de.",
+                    "Sen ekran paylaşımı yardımcısısın. Kullanıcının ekranını görüyorsun. Eğer kullanıcı bir butonu/alanı sorarsa yaklaşık konumunu bul. SADECE geçerli JSON döndür: {\"reply\":\"1-2 cümle doğal Türkçe cevap\",\"label\":\"kısa etiket\",\"crop\":{\"x\":0.0,\"y\":0.0,\"w\":0.25,\"h\":0.25}}. crop değerleri 0-1 arası normalize ekran oranı olsun ve hedefin etrafında biraz pay bıraksın. Hedef yoksa crop null döndür ve kullanıcıya aşağı/sağa kaydırmasını söyle. Markdown veya kod bloğu yazma.",
                 },
                 {
                   role: "user",
@@ -48,10 +48,32 @@ export const Route = createFileRoute("/api/screen-help")({
             return Response.json({ error: "Görsel analiz başarısız" }, { status: 502 });
           }
           const data = await resp.json();
-          const reply: string =
-            data?.choices?.[0]?.message?.content?.toString().trim() ||
+          const raw: string = data?.choices?.[0]?.message?.content?.toString().trim() || "";
+          const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+          let parsed: { reply?: string; label?: string; crop?: unknown } | null = null;
+          try {
+            parsed = JSON.parse(cleaned);
+          } catch {
+            parsed = null;
+          }
+          const cropCandidate = parsed?.crop as { x?: number; y?: number; w?: number; h?: number } | null;
+          const crop =
+            cropCandidate &&
+            [cropCandidate.x, cropCandidate.y, cropCandidate.w, cropCandidate.h].every(
+              (n) => typeof n === "number" && Number.isFinite(n),
+            )
+              ? {
+                  x: Math.max(0, Math.min(0.98, cropCandidate.x!)),
+                  y: Math.max(0, Math.min(0.98, cropCandidate.y!)),
+                  w: Math.max(0.08, Math.min(1, cropCandidate.w!)),
+                  h: Math.max(0.08, Math.min(1, cropCandidate.h!)),
+                }
+              : null;
+          const reply =
+            parsed?.reply?.toString().trim() ||
+            raw ||
             "Ekranı gördüm ama net bir cevap veremedim kanka.";
-          return Response.json({ reply });
+          return Response.json({ reply, label: parsed?.label?.toString().trim() || "Ekran kırpımı", crop });
         } catch (e) {
           console.error("screen-help route error:", e);
           return Response.json({ error: "Hata" }, { status: 500 });
