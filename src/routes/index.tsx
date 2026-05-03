@@ -818,6 +818,40 @@ function Index() {
     }
   };
 
+  const isScreenHelpRequest = (text: string) => {
+    const t = text.toLowerCase();
+    return (
+      t.includes("ekran") ||
+      t.includes("buton") ||
+      t.includes("düğme") ||
+      t.includes("nerede") ||
+      t.includes("kırp") ||
+      t.includes("crop") ||
+      t.includes("gösterir misin") ||
+      t.includes("göster")
+    );
+  };
+
+  const makeScreenCrop = (
+    source: HTMLCanvasElement,
+    crop: { x: number; y: number; w: number; h: number },
+  ) => {
+    const sx = Math.max(0, Math.floor(source.width * crop.x));
+    const sy = Math.max(0, Math.floor(source.height * crop.y));
+    const sw = Math.max(80, Math.min(source.width - sx, Math.floor(source.width * crop.w)));
+    const sh = Math.max(80, Math.min(source.height - sy, Math.floor(source.height * crop.h)));
+    const out = document.createElement("canvas");
+    out.width = sw;
+    out.height = sh;
+    const outCtx = out.getContext("2d");
+    if (!outCtx) return null;
+    outCtx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+    outCtx.strokeStyle = "rgba(125, 211, 252, 0.95)";
+    outCtx.lineWidth = Math.max(4, Math.round(Math.min(sw, sh) * 0.012));
+    outCtx.strokeRect(4, 4, sw - 8, sh - 8);
+    return out.toDataURL("image/jpeg", 0.92);
+  };
+
   const stopRecorder = (silent?: boolean) => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
