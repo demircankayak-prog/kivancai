@@ -1666,6 +1666,18 @@ function Index() {
                           </a>
                         </div>
                       )}
+                      {m.screenCrop && (
+                        <div className="mb-2 overflow-hidden rounded-lg border border-brand/40 bg-brand/5">
+                          <img
+                            src={m.screenCrop.image}
+                            alt={m.screenCrop.label}
+                            className="max-h-80 w-full object-contain"
+                          />
+                          <p className="border-t border-brand/20 px-3 py-2 text-xs font-medium text-brand">
+                            {m.screenCrop.label}
+                          </p>
+                        </div>
+                      )}
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
