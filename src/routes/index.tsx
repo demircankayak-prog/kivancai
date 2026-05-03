@@ -1072,7 +1072,11 @@ function Index() {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) {
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
+        return;
+      }
       ctx.drawImage(video, 0, 0, w, h);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       const q =
@@ -1105,6 +1109,8 @@ function Index() {
       await speakReply(reply);
     } catch (e) {
       console.error("screen capture error:", e);
+      liveRecognitionPausedRef.current = false;
+      if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     } finally {
       setScreenHelpLoading(false);
     }
