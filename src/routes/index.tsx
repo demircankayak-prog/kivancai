@@ -590,6 +590,38 @@ function Index() {
     liveRecognitionPausedRef.current = false;
   };
 
+  const speakWithBrowserVoice = async (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+    const clean = text.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim();
+    if (!clean) return false;
+    return new Promise<boolean>((resolve) => {
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(clean);
+        const pickVoice = () => {
+          const voices = window.speechSynthesis.getVoices();
+          const trVoice = voices.find((v) => /tr|turkish|türk/i.test(`${v.lang} ${v.name}`));
+          const naturalVoice = voices.find((v) => /google|microsoft|zira|natural|online/i.test(v.name));
+          utter.voice = trVoice || naturalVoice || voices[0] || null;
+          utter.lang = utter.voice?.lang || "tr-TR";
+          utter.rate = 0.98;
+          utter.pitch = 1.02;
+          utter.volume = 1;
+          utter.onend = () => resolve(true);
+          utter.onerror = () => resolve(false);
+          window.speechSynthesis.speak(utter);
+        };
+        if (window.speechSynthesis.getVoices().length) pickVoice();
+        else {
+          window.speechSynthesis.onvoiceschanged = pickVoice;
+          window.setTimeout(pickVoice, 250);
+        }
+      } catch {
+        resolve(false);
+      }
+    });
+  };
+
   const startBrowserLiveRecognition = () => {
     const speechWindow = window as Window & {
       SpeechRecognition?: BrowserSpeechRecognitionConstructor;
@@ -657,7 +689,10 @@ function Index() {
       });
       if (!resp.ok) {
         console.error("TTS http error", resp.status);
+        await speakWithBrowserVoice(clean);
         setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
         return;
       }
       const blob = await resp.blob();
@@ -684,6 +719,8 @@ function Index() {
       }
       setVoiceSpeaking(false);
       liveRecognitionPausedRef.current = false;
+      await speakWithBrowserVoice(clean);
+      if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     }
   };
 
