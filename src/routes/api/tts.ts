@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// ElevenLabs Flash v2.5 — düşük gecikme, doğal Türkçe TTS
-// Varsayılan ses: Aria (9BWtsMINqrJLrRacOk9x) — Gemini/ChatGPT tarzına daha yakın, yumuşak ve net.
-const DEFAULT_VOICE = "9BWtsMINqrJLrRacOk9x";
+// ElevenLabs Multilingual v2 — canlı sohbet için daha doğal, yumuşak ve net TTS
+// Varsayılan ses: Sarah (EXAVITQu4vr4xnSDxMaL) — ChatGPT/Gemini tarzına yakın, temiz konuşma.
+const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
 
 export const Route = createFileRoute("/api/tts")({
   server: {
@@ -37,13 +37,13 @@ export const Route = createFileRoute("/api/tts")({
               },
               body: JSON.stringify({
                 text: cleanText,
-                model_id: "eleven_flash_v2_5",
+                model_id: "eleven_multilingual_v2",
                 voice_settings: {
-                  stability: 0.62,
-                  similarity_boost: 0.88,
-                  style: 0.18,
-                  use_speaker_boost: false,
-                  speed: 0.96,
+                  stability: 0.48,
+                  similarity_boost: 0.82,
+                  style: 0.34,
+                  use_speaker_boost: true,
+                  speed: 1.0,
                 },
               }),
             },
