@@ -45,6 +45,11 @@ export const Route = createFileRoute("/")({
 });
 
 type Attachment = { kind: "image" | "video"; url: string; name?: string };
+type ScreenCropPreview = {
+  image: string;
+  label: string;
+  reply: string;
+};
 type Msg = {
   role: "user" | "assistant";
   content: string;
@@ -52,6 +57,7 @@ type Msg = {
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
   videoWatermark?: boolean; // ilk videoda false, sonrakilerde true
+  screenCrop?: ScreenCropPreview;
 };
 type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
