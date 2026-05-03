@@ -1142,6 +1142,7 @@ function Index() {
       screenStreamRef.current = null;
       setScreenSharing(false);
     }
+    setScreenCropPreview(null);
     setVoiceLiveOpen(false);
     setVoiceTranscript("");
     setVoiceReply("");
