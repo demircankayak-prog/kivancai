@@ -717,7 +717,14 @@ function Index() {
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
-      await audio.play().catch(() => undefined);
+      const played = await audio.play().then(() => true).catch(() => false);
+      if (!played) {
+        URL.revokeObjectURL(url);
+        await speakWithBrowserVoice(clean);
+        setVoiceSpeaking(false);
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
+      }
     } catch (e) {
       if ((e as { name?: string })?.name !== "AbortError") {
         console.error("TTS error:", e);
