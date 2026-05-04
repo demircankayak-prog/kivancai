@@ -1,4 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { checkPremiumByAuthHeader } from "@/server/premium.functions";
+
+const PREMIUM_MODEL_IDS = new Set<string>([
+  "openai/gpt-5",
+  "openai/gpt-5.2",
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-2.5-pro",
+  "kivancai_pro",
+]);
+
+const KIVANCAI_PRO_SYSTEM = `Sen KıvançAI Pro'sun — gelişmiş geliştirici modu. Üst düzey yazılım mimarisi, derin akıl yürütme, üretim kalitesinde tam çalışır kod, performans ve güvenlik odaklısın. Kısaltma yapma, eksik bırakma, hata durumlarını ve uç vakaları kapsa. Dosya/dizin yapısı, kurulum adımları, çalıştırma komutları ve test örneği ekle.`;
 
 const textFromContent = (content: unknown): string => {
   if (typeof content === "string") return content;
@@ -78,6 +89,24 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         try {
           const { messages, model } = await request.json();
+          const auth = request.headers.get("authorization") || request.headers.get("Authorization");
+          const ent = await checkPremiumByAuthHeader(auth);
+
+          // Premium gate
+          let resolvedModel = model || "google/gemini-3-flash-preview";
+          let extraSystem = "";
+          if (resolvedModel === "kivancai_pro") {
+            if (!ent.premium) {
+              return streamText("Bu model (KıvançAI Pro) sadece premium üyeler için. Ayarlardan üyelik açabilirsin kanka.");
+            }
+            extraSystem = "\n\n" + KIVANCAI_PRO_SYSTEM;
+            resolvedModel = "openai/gpt-5";
+          } else if (PREMIUM_MODEL_IDS.has(resolvedModel) && !ent.premium) {
+            return streamText("Bu model premium üyelere özel kanka. Ayarlar → Premium üyelik kısmından açabilirsin.");
+          }
+          if (ent.persona && ent.persona.trim()) {
+            extraSystem += `\n\nKULLANICI TARZ TERCİHİ (mutlaka uy):\n${ent.persona.trim()}`;
+          }
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
           if (!LOVABLE_API_KEY) {
             return streamText(fallbackAnswer(messages));
@@ -138,8 +167,8 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: model || "google/gemini-3-flash-preview",
-              messages: [{ role: "system", content: SYSTEM }, ...messages],
+              model: resolvedModel,
+              messages: [{ role: "system", content: SYSTEM + extraSystem }, ...messages],
               stream: true,
             }),
           });
