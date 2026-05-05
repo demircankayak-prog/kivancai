@@ -1945,7 +1945,7 @@ function Index() {
                 </div>
               )}
               {quickPanel === "settings" && (
-                <div className="mb-3 rounded-xl border border-border bg-background/80 p-3">
+                <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-background/80 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <KeyRound size={15} className="text-brand" /> Kişisel AI ayarları
@@ -1958,6 +1958,146 @@ function Index() {
                     >
                       <X size={14} />
                     </button>
+                  </div>
+                  {/* Premium üyelik */}
+                  <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/5 p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+                      <Crown size={13} /> Premium üyelik
+                      {entitlement.premium && (
+                        <span className="ml-auto rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px]">
+                          {entitlement.owner ? "OWNER (sınırsız)" : `AKTİF · ${entitlement.plan}`}
+                        </span>
+                      )}
+                    </div>
+                    {entitlement.premium ? (
+                      <p className="text-xs text-muted-foreground">
+                        Tüm premium modeller (KıvançAI Pro, GPT-5, Gemini 3.1 Pro, Gemini 2.5 Pro, GPT-5.2) açık.
+                        {entitlement.expiresAt && (
+                          <> Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}.</>
+                        )}
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
+                          className="rounded-md border border-border bg-background p-2 text-left transition hover:border-amber-400/50"
+                        >
+                          <div className="text-sm font-semibold text-foreground">Basic</div>
+                          <div className="text-xs text-muted-foreground">50 ₺ / 1 ay</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">2-3 premium model</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
+                          className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-left transition hover:border-amber-400"
+                        >
+                          <div className="text-sm font-semibold text-amber-400">Full Access</div>
+                          <div className="text-xs text-muted-foreground">200 ₺ / 3 ay</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">Tüm modeller + KıvançAI Pro</div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Persona */}
+                  <div className="mb-3 rounded-lg border border-border bg-background p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      <Bot size={13} className="text-brand" /> AI Karakter / Konuşma Tarzı
+                    </div>
+                    <p className="mb-2 text-[11px] text-muted-foreground">
+                      AI'nın seninle nasıl konuşmasını istiyorsan yaz. Örn: "Çok sevimli ol, kanka diye hitap et", "küfürlü ve sokak ağzıyla konuş", "tamamen profesyonel davran" vs.
+                    </p>
+                    <textarea
+                      value={persona}
+                      onChange={(e) => setPersona(e.target.value)}
+                      maxLength={2000}
+                      placeholder="Örn: Bana kanka diye hitap et, çok rahat konuş, gerektiğinde küfür de edebilirsin, ama önce hep işi düzgün anlat."
+                      className="h-24 w-full resize-none rounded-md border border-input bg-background p-2 text-sm text-foreground outline-none focus:border-brand"
+                    />
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">{persona.length}/2000</span>
+                      <button
+                        type="button"
+                        onClick={handleSavePersona}
+                        disabled={personaSaving || !user}
+                        className="rounded-md bg-brand px-3 py-1 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                      >
+                        {personaSaving ? "Kaydediliyor…" : personaSavedAt ? "✓ Kaydedildi" : "Kaydet"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Kişisel API anahtarı */}
+                  <div className="mb-3 rounded-lg border border-border bg-background p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      <KeyRound size={13} className="text-brand" /> Kişisel API anahtarın
+                    </div>
+                    <p className="mb-2 text-[11px] text-muted-foreground">
+                      Hesabına bağlı, paylaşılamaz. Tek seferlik gösterilir — kopyalamayı unutma.
+                    </p>
+                    {newApiKey ? (
+                      <div className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2">
+                        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                          ⚠️ BU ANAHTAR SADECE BİR KEZ GÖSTERİLİR
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 break-all rounded bg-background px-2 py-1 text-xs">
+                            {newApiKey}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={copyKey}
+                            className="grid h-7 w-7 place-items-center rounded-md border border-border hover:bg-accent"
+                            title="Kopyala"
+                          >
+                            {keyCopied ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewApiKey(null)}
+                          className="mt-2 text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          Kaydettim, gizle
+                        </button>
+                      </div>
+                    ) : apiKeyMeta ? (
+                      <div className="flex items-center justify-between gap-2 rounded-md bg-secondary px-2 py-2 text-xs">
+                        <code>{apiKeyMeta.key_prefix}…{apiKeyMeta.last4}</code>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={handleGenerateKey}
+                            disabled={keyBusy}
+                            className="rounded bg-brand px-2 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
+                          >
+                            Yeniden Oluştur
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRevokeKey}
+                            disabled={keyBusy}
+                            className="rounded border border-destructive/50 px-2 py-1 text-[10px] font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-40"
+                          >
+                            Sil
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleGenerateKey}
+                        disabled={keyBusy || !user}
+                        className="w-full rounded-md bg-brand px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                      >
+                        {keyBusy ? "Oluşturuluyor…" : "API Anahtarı Oluştur"}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    3. Taraf API (opsiyonel)
                   </div>
                   <label className="mb-3 flex items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-xs text-secondary-foreground">
                     <span>Kendi API anahtarımı kullan</span>
