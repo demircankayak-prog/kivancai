@@ -2084,29 +2084,54 @@ function Index() {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setModelMenuOpen(false)} />
                       <div className="absolute bottom-12 left-0 z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
-                        <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          AI Modelleri ({MODELS.length})
-                        </p>
-                        {MODELS.map((m, idx) => (
+                        <div className="flex items-center justify-between px-2 py-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Premium Model Seçimi ({MODELS.length})
+                          </p>
+                          {entitlement.premium ? (
+                            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                              {entitlement.owner ? "OWNER" : "PREMIUM"}
+                            </span>
+                          ) : (
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                              FREE
+                            </span>
+                          )}
+                        </div>
+                        {MODELS.map((m, idx) => {
+                          const locked = !!m.premium && !entitlement.premium;
+                          return (
                           <button
                             key={`${m.label}-${idx}`}
                             type="button"
-                            disabled={!m.available}
+                            disabled={!m.available || locked}
                             onClick={() => {
-                              if (m.available) {
+                              if (m.available && !locked) {
                                 setModelKey(m.label);
                                 setModelMenuOpen(false);
+                              } else if (locked) {
+                                setModelMenuOpen(false);
+                                openQuickPanel("settings");
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
                               modelKey === m.label
                                 ? "bg-brand/15 text-brand"
                                 : "text-foreground hover:bg-accent"
-                            } ${!m.available ? "cursor-not-allowed opacity-50" : ""}`}
+                            } ${!m.available ? "cursor-not-allowed opacity-50" : ""} ${locked ? "opacity-70" : ""}`}
                             title={m.description}
                           >
                             <div className="flex w-full items-center justify-between">
-                              <span className="font-medium">{m.label}</span>
+                              <span className="flex items-center gap-1.5 font-medium">
+                                {m.label}
+                                {m.premium && (
+                                  locked ? (
+                                    <Lock size={11} className="text-muted-foreground" />
+                                  ) : (
+                                    <Crown size={11} className="text-amber-400" />
+                                  )
+                                )}
+                              </span>
                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                 {m.provider}
                               </span>
@@ -2117,8 +2142,14 @@ function Index() {
                                 YAKINDA
                               </span>
                             )}
+                            {locked && (
+                              <span className="mt-1 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                                🔒 PREMIUM — tıkla & üyelik aç
+                              </span>
+                            )}
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </>
                   )}
