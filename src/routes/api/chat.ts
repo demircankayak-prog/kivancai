@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { checkPremiumByAuthHeader } from "@/server/premium.functions";
+import { checkPremiumByAuthHeader } from "@/server/premium.server";
 
 const PREMIUM_MODEL_IDS = new Set<string>([
   "openai/gpt-5",
