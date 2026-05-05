@@ -1387,9 +1387,13 @@ function Index() {
         return;
       }
 
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
       const resp = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ messages: apiMessages, model: selectedModel.id }),
       });
 
