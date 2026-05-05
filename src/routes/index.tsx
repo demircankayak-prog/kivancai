@@ -2026,18 +2026,18 @@ function Index() {
               />
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="relative flex items-center gap-3 text-muted-foreground">
-                  {/* Plus / Model picker */}
+                  {/* Premium model picker */}
                   <button
                     type="button"
                     onClick={() => {
                       setQuickPanel(null);
                       setModelMenuOpen((o) => !o);
                     }}
-                    aria-label="Model seç"
-                    title="AI modeli seç"
-                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                    aria-label="Premium model seçimi"
+                    title="Premium Model Seçimi"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent ${entitlement.premium ? "text-amber-400 hover:text-amber-300" : "text-muted-foreground hover:text-foreground"}`}
                   >
-                    <Plus size={20} />
+                    <Crown size={18} />
                   </button>
                   <button
                     type="button"
