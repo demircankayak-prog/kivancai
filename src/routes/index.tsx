@@ -32,13 +32,26 @@ import {
   MessageSquare,
   NotebookTabs,
   Shield,
+  Crown,
+  Lock,
+  Copy,
+  Check,
   AudioLines,
   MonitorUp,
   PhoneOff,
   Camera,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/kivancai-logo-circle.png";
+import {
+  getEntitlement,
+  generateApiKey,
+  getApiKeyMeta,
+  revokeApiKey,
+  savePersona,
+  getPersona,
+} from "@/server/premium.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -88,9 +101,18 @@ interface ModelOption {
   provider: string;
   description: string;
   available: boolean;
+  premium?: boolean;
 }
 
 const MODELS: ModelOption[] = [
+  {
+    id: "kivancai_pro",
+    label: "KıvançAI Pro",
+    provider: "KıvançAI",
+    description: "Geliştirici Modu — derin akıl yürütme + production kalitesinde kod",
+    available: true,
+    premium: true,
+  },
   {
     id: "google/gemini-3-flash-preview",
     label: "Gemini 3 Flash",
@@ -104,6 +126,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "En güçlü Gemini — derin akıl yürütme",
     available: true,
+    premium: true,
   },
   {
     id: "google/gemini-2.5-pro",
@@ -111,6 +134,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "Görsel + uzun bağlam + karmaşık analiz",
     available: true,
+    premium: true,
   },
   {
     id: "google/gemini-2.5-flash",
@@ -132,6 +156,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "OpenAI'nin en yeni modeli — karmaşık problem çözme",
     available: true,
+    premium: true,
   },
   {
     id: "openai/gpt-5",
@@ -139,6 +164,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "Güçlü çok yönlü — mükemmel akıl yürütme",
     available: true,
+    premium: true,
   },
   {
     id: "openai/gpt-5-mini",
@@ -293,6 +319,69 @@ function Index() {
   const [customAiEndpoint, setCustomAiEndpoint] = useState(
     "https://api.poe.com/v1/chat/completions",
   );
+
+  // Premium / API key / persona
+  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null }>({ premium: false, owner: false, plan: null, expiresAt: null });
+  const [persona, setPersona] = useState("");
+  const [personaSaving, setPersonaSaving] = useState(false);
+  const [personaSavedAt, setPersonaSavedAt] = useState<number | null>(null);
+  const [apiKeyMeta, setApiKeyMeta] = useState<{ key_prefix: string; last4: string; revealed: boolean; created_at: string; last_used_at: string | null } | null>(null);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [keyCopied, setKeyCopied] = useState(false);
+  const [keyBusy, setKeyBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null });
+      setPersona("");
+      setApiKeyMeta(null);
+      return;
+    }
+    getEntitlement().then(setEntitlement).catch(() => undefined);
+    getPersona().then((r) => setPersona(r.persona || "")).catch(() => undefined);
+    getApiKeyMeta().then((r) => setApiKeyMeta(r.meta as typeof apiKeyMeta)).catch(() => undefined);
+  }, [user]);
+
+  const handleSavePersona = async () => {
+    setPersonaSaving(true);
+    try {
+      await savePersona({ data: { persona } });
+      setPersonaSavedAt(Date.now());
+      setTimeout(() => setPersonaSavedAt(null), 2000);
+    } finally {
+      setPersonaSaving(false);
+    }
+  };
+
+  const handleGenerateKey = async () => {
+    setKeyBusy(true);
+    try {
+      const r = await generateApiKey();
+      setNewApiKey(r.key);
+      const meta = await getApiKeyMeta();
+      setApiKeyMeta(meta.meta as typeof apiKeyMeta);
+    } finally {
+      setKeyBusy(false);
+    }
+  };
+
+  const handleRevokeKey = async () => {
+    setKeyBusy(true);
+    try {
+      await revokeApiKey();
+      setApiKeyMeta(null);
+      setNewApiKey(null);
+    } finally {
+      setKeyBusy(false);
+    }
+  };
+
+  const copyKey = async () => {
+    if (!newApiKey) return;
+    await navigator.clipboard.writeText(newApiKey);
+    setKeyCopied(true);
+    setTimeout(() => setKeyCopied(false), 1500);
+  };
 
   const openQuickPanel = (panel: "image" | "video" | "settings") => {
     setModelMenuOpen(false);
@@ -1299,9 +1388,13 @@ function Index() {
         return;
       }
 
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
       const resp = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ messages: apiMessages, model: selectedModel.id }),
       });
 
@@ -1852,7 +1945,7 @@ function Index() {
                 </div>
               )}
               {quickPanel === "settings" && (
-                <div className="mb-3 rounded-xl border border-border bg-background/80 p-3">
+                <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-background/80 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <KeyRound size={15} className="text-brand" /> Kişisel AI ayarları
@@ -1865,6 +1958,146 @@ function Index() {
                     >
                       <X size={14} />
                     </button>
+                  </div>
+                  {/* Premium üyelik */}
+                  <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/5 p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+                      <Crown size={13} /> Premium üyelik
+                      {entitlement.premium && (
+                        <span className="ml-auto rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px]">
+                          {entitlement.owner ? "OWNER (sınırsız)" : `AKTİF · ${entitlement.plan}`}
+                        </span>
+                      )}
+                    </div>
+                    {entitlement.premium ? (
+                      <p className="text-xs text-muted-foreground">
+                        Tüm premium modeller (KıvançAI Pro, GPT-5, Gemini 3.1 Pro, Gemini 2.5 Pro, GPT-5.2) açık.
+                        {entitlement.expiresAt && (
+                          <> Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}.</>
+                        )}
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
+                          className="rounded-md border border-border bg-background p-2 text-left transition hover:border-amber-400/50"
+                        >
+                          <div className="text-sm font-semibold text-foreground">Basic</div>
+                          <div className="text-xs text-muted-foreground">50 ₺ / 1 ay</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">2-3 premium model</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
+                          className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-left transition hover:border-amber-400"
+                        >
+                          <div className="text-sm font-semibold text-amber-400">Full Access</div>
+                          <div className="text-xs text-muted-foreground">200 ₺ / 3 ay</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">Tüm modeller + KıvançAI Pro</div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Persona */}
+                  <div className="mb-3 rounded-lg border border-border bg-background p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      <Bot size={13} className="text-brand" /> AI Karakter / Konuşma Tarzı
+                    </div>
+                    <p className="mb-2 text-[11px] text-muted-foreground">
+                      AI'nın seninle nasıl konuşmasını istiyorsan yaz. Örn: "Çok sevimli ol, kanka diye hitap et", "küfürlü ve sokak ağzıyla konuş", "tamamen profesyonel davran" vs.
+                    </p>
+                    <textarea
+                      value={persona}
+                      onChange={(e) => setPersona(e.target.value)}
+                      maxLength={2000}
+                      placeholder="Örn: Bana kanka diye hitap et, çok rahat konuş, gerektiğinde küfür de edebilirsin, ama önce hep işi düzgün anlat."
+                      className="h-24 w-full resize-none rounded-md border border-input bg-background p-2 text-sm text-foreground outline-none focus:border-brand"
+                    />
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">{persona.length}/2000</span>
+                      <button
+                        type="button"
+                        onClick={handleSavePersona}
+                        disabled={personaSaving || !user}
+                        className="rounded-md bg-brand px-3 py-1 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                      >
+                        {personaSaving ? "Kaydediliyor…" : personaSavedAt ? "✓ Kaydedildi" : "Kaydet"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Kişisel API anahtarı */}
+                  <div className="mb-3 rounded-lg border border-border bg-background p-3">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      <KeyRound size={13} className="text-brand" /> Kişisel API anahtarın
+                    </div>
+                    <p className="mb-2 text-[11px] text-muted-foreground">
+                      Hesabına bağlı, paylaşılamaz. Tek seferlik gösterilir — kopyalamayı unutma.
+                    </p>
+                    {newApiKey ? (
+                      <div className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2">
+                        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                          ⚠️ BU ANAHTAR SADECE BİR KEZ GÖSTERİLİR
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 break-all rounded bg-background px-2 py-1 text-xs">
+                            {newApiKey}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={copyKey}
+                            className="grid h-7 w-7 place-items-center rounded-md border border-border hover:bg-accent"
+                            title="Kopyala"
+                          >
+                            {keyCopied ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewApiKey(null)}
+                          className="mt-2 text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          Kaydettim, gizle
+                        </button>
+                      </div>
+                    ) : apiKeyMeta ? (
+                      <div className="flex items-center justify-between gap-2 rounded-md bg-secondary px-2 py-2 text-xs">
+                        <code>{apiKeyMeta.key_prefix}…{apiKeyMeta.last4}</code>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={handleGenerateKey}
+                            disabled={keyBusy}
+                            className="rounded bg-brand px-2 py-1 text-[10px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
+                          >
+                            Yeniden Oluştur
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRevokeKey}
+                            disabled={keyBusy}
+                            className="rounded border border-destructive/50 px-2 py-1 text-[10px] font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-40"
+                          >
+                            Sil
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleGenerateKey}
+                        disabled={keyBusy || !user}
+                        className="w-full rounded-md bg-brand px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                      >
+                        {keyBusy ? "Oluşturuluyor…" : "API Anahtarı Oluştur"}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    3. Taraf API (opsiyonel)
                   </div>
                   <label className="mb-3 flex items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-xs text-secondary-foreground">
                     <span>Kendi API anahtarımı kullan</span>
@@ -1933,18 +2166,18 @@ function Index() {
               />
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="relative flex items-center gap-3 text-muted-foreground">
-                  {/* Plus / Model picker */}
+                  {/* Premium model picker */}
                   <button
                     type="button"
                     onClick={() => {
                       setQuickPanel(null);
                       setModelMenuOpen((o) => !o);
                     }}
-                    aria-label="Model seç"
-                    title="AI modeli seç"
-                    className="grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent hover:text-foreground"
+                    aria-label="Premium model seçimi"
+                    title="Premium Model Seçimi"
+                    className={`grid h-8 w-8 place-items-center rounded-md transition hover:bg-accent ${entitlement.premium ? "text-amber-400 hover:text-amber-300" : "text-muted-foreground hover:text-foreground"}`}
                   >
-                    <Plus size={20} />
+                    <Crown size={18} />
                   </button>
                   <button
                     type="button"
@@ -1991,29 +2224,54 @@ function Index() {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setModelMenuOpen(false)} />
                       <div className="absolute bottom-12 left-0 z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl">
-                        <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          AI Modelleri ({MODELS.length})
-                        </p>
-                        {MODELS.map((m, idx) => (
+                        <div className="flex items-center justify-between px-2 py-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Premium Model Seçimi ({MODELS.length})
+                          </p>
+                          {entitlement.premium ? (
+                            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                              {entitlement.owner ? "OWNER" : "PREMIUM"}
+                            </span>
+                          ) : (
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                              FREE
+                            </span>
+                          )}
+                        </div>
+                        {MODELS.map((m, idx) => {
+                          const locked = !!m.premium && !entitlement.premium;
+                          return (
                           <button
                             key={`${m.label}-${idx}`}
                             type="button"
-                            disabled={!m.available}
+                            disabled={!m.available || locked}
                             onClick={() => {
-                              if (m.available) {
+                              if (m.available && !locked) {
                                 setModelKey(m.label);
                                 setModelMenuOpen(false);
+                              } else if (locked) {
+                                setModelMenuOpen(false);
+                                openQuickPanel("settings");
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
                               modelKey === m.label
                                 ? "bg-brand/15 text-brand"
                                 : "text-foreground hover:bg-accent"
-                            } ${!m.available ? "cursor-not-allowed opacity-50" : ""}`}
+                            } ${!m.available ? "cursor-not-allowed opacity-50" : ""} ${locked ? "opacity-70" : ""}`}
                             title={m.description}
                           >
                             <div className="flex w-full items-center justify-between">
-                              <span className="font-medium">{m.label}</span>
+                              <span className="flex items-center gap-1.5 font-medium">
+                                {m.label}
+                                {m.premium && (
+                                  locked ? (
+                                    <Lock size={11} className="text-muted-foreground" />
+                                  ) : (
+                                    <Crown size={11} className="text-amber-400" />
+                                  )
+                                )}
+                              </span>
                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                 {m.provider}
                               </span>
@@ -2024,8 +2282,14 @@ function Index() {
                                 YAKINDA
                               </span>
                             )}
+                            {locked && (
+                              <span className="mt-1 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                                🔒 PREMIUM — tıkla & üyelik aç
+                              </span>
+                            )}
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </>
                   )}
