@@ -32,6 +32,10 @@ import {
   MessageSquare,
   NotebookTabs,
   Shield,
+  Crown,
+  Lock,
+  Copy,
+  Check,
   AudioLines,
   MonitorUp,
   PhoneOff,
@@ -39,6 +43,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/kivancai-logo-circle.png";
+import {
+  getEntitlement,
+  generateApiKey,
+  getApiKeyMeta,
+  revokeApiKey,
+  savePersona,
+  getPersona,
+} from "@/server/premium.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
