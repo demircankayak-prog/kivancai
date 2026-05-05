@@ -42,6 +42,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/kivancai-logo-circle.png";
 import {
   getEntitlement,
