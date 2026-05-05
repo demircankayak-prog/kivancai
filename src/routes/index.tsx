@@ -319,6 +319,69 @@ function Index() {
     "https://api.poe.com/v1/chat/completions",
   );
 
+  // Premium / API key / persona
+  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null }>({ premium: false, owner: false, plan: null, expiresAt: null });
+  const [persona, setPersona] = useState("");
+  const [personaSaving, setPersonaSaving] = useState(false);
+  const [personaSavedAt, setPersonaSavedAt] = useState<number | null>(null);
+  const [apiKeyMeta, setApiKeyMeta] = useState<{ key_prefix: string; last4: string; revealed: boolean; created_at: string; last_used_at: string | null } | null>(null);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [keyCopied, setKeyCopied] = useState(false);
+  const [keyBusy, setKeyBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null });
+      setPersona("");
+      setApiKeyMeta(null);
+      return;
+    }
+    getEntitlement().then(setEntitlement).catch(() => undefined);
+    getPersona().then((r) => setPersona(r.persona || "")).catch(() => undefined);
+    getApiKeyMeta().then((r) => setApiKeyMeta(r.meta as typeof apiKeyMeta)).catch(() => undefined);
+  }, [user]);
+
+  const handleSavePersona = async () => {
+    setPersonaSaving(true);
+    try {
+      await savePersona({ data: { persona } });
+      setPersonaSavedAt(Date.now());
+      setTimeout(() => setPersonaSavedAt(null), 2000);
+    } finally {
+      setPersonaSaving(false);
+    }
+  };
+
+  const handleGenerateKey = async () => {
+    setKeyBusy(true);
+    try {
+      const r = await generateApiKey();
+      setNewApiKey(r.key);
+      const meta = await getApiKeyMeta();
+      setApiKeyMeta(meta.meta as typeof apiKeyMeta);
+    } finally {
+      setKeyBusy(false);
+    }
+  };
+
+  const handleRevokeKey = async () => {
+    setKeyBusy(true);
+    try {
+      await revokeApiKey();
+      setApiKeyMeta(null);
+      setNewApiKey(null);
+    } finally {
+      setKeyBusy(false);
+    }
+  };
+
+  const copyKey = async () => {
+    if (!newApiKey) return;
+    await navigator.clipboard.writeText(newApiKey);
+    setKeyCopied(true);
+    setTimeout(() => setKeyCopied(false), 1500);
+  };
+
   const openQuickPanel = (panel: "image" | "video" | "settings") => {
     setModelMenuOpen(false);
     setQuickPanel((q) => (q === panel ? null : panel));
