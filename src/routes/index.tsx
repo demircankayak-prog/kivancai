@@ -100,9 +100,18 @@ interface ModelOption {
   provider: string;
   description: string;
   available: boolean;
+  premium?: boolean;
 }
 
 const MODELS: ModelOption[] = [
+  {
+    id: "kivancai_pro",
+    label: "KıvançAI Pro",
+    provider: "KıvançAI",
+    description: "Geliştirici Modu — derin akıl yürütme + production kalitesinde kod",
+    available: true,
+    premium: true,
+  },
   {
     id: "google/gemini-3-flash-preview",
     label: "Gemini 3 Flash",
@@ -116,6 +125,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "En güçlü Gemini — derin akıl yürütme",
     available: true,
+    premium: true,
   },
   {
     id: "google/gemini-2.5-pro",
@@ -123,6 +133,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "Görsel + uzun bağlam + karmaşık analiz",
     available: true,
+    premium: true,
   },
   {
     id: "google/gemini-2.5-flash",
@@ -144,6 +155,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "OpenAI'nin en yeni modeli — karmaşık problem çözme",
     available: true,
+    premium: true,
   },
   {
     id: "openai/gpt-5",
@@ -151,6 +163,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "Güçlü çok yönlü — mükemmel akıl yürütme",
     available: true,
+    premium: true,
   },
   {
     id: "openai/gpt-5-mini",
