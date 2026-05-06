@@ -1848,7 +1848,7 @@ function Index() {
                 hidden
                 onChange={handleFileSelect}
               />
-              {quickPanel && quickPanel !== "settings" && (
+              {quickPanel && quickPanel !== "settings" && quickPanel !== "shop" && (
                 <div className="mb-3 rounded-xl border border-brand/40 bg-brand/5 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold text-brand">
