@@ -403,13 +403,12 @@ function Index() {
 
   // Seçili model kilitlenmişse erişilebilir bir modele düş
   useEffect(() => {
-    const allowed = entitlement.allowedModels;
-    const isAllowed =
-      allowed === "all" || (Array.isArray(allowed) && allowed.includes(selectedModel.id));
+    const allowed = entitlement.allowedModels as string[] | "all";
+    const all = allowed === "all";
+    const list = Array.isArray(allowed) ? allowed : [];
+    const isAllowed = all || list.includes(selectedModel.id);
     if (!isAllowed) {
-      const fallback = MODELS.find((m) =>
-        allowed === "all" ? true : Array.isArray(allowed) && allowed.includes(m.id),
-      );
+      const fallback = MODELS.find((m) => all || list.includes(m.id));
       if (fallback) setModelKey(fallback.label);
     }
   }, [entitlement, selectedModel.id]);
