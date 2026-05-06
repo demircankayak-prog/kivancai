@@ -1979,28 +1979,15 @@ function Index() {
                           <> Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}.</>
                         )}
                       </p>
-                    ) : (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
-                          className="rounded-md border border-border bg-background p-2 text-left transition hover:border-amber-400/50"
-                        >
-                          <div className="text-sm font-semibold text-foreground">Basic</div>
-                          <div className="text-xs text-muted-foreground">50 ₺ / 1 ay</div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">2-3 premium model</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
-                          className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-left transition hover:border-amber-400"
-                        >
-                          <div className="text-sm font-semibold text-amber-400">Full Access</div>
-                          <div className="text-xs text-muted-foreground">200 ₺ / 3 ay</div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">Tüm modeller + KıvançAI Pro</div>
-                        </button>
-                      </div>
-                    )}
+                     ) : (
+                       <button
+                         type="button"
+                         onClick={() => openQuickPanel("shop")}
+                         className="flex w-full items-center justify-center gap-2 rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-sm font-semibold text-amber-400 transition hover:border-amber-400"
+                       >
+                         <ShoppingBag size={14} /> Mağazayı Aç
+                       </button>
+                     )}
                   </div>
 
                   {/* Persona */}
