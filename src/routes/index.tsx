@@ -1947,6 +1947,85 @@ function Index() {
                   </div>
                 </div>
               )}
+              {quickPanel === "shop" && (
+                <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-amber-400/40 bg-background/90 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
+                      <ShoppingBag size={15} /> KıvançAI Mağaza
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPanel(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {entitlement.premium && (
+                    <div className="mb-3 rounded-md border border-emerald-400/30 bg-emerald-400/10 p-2 text-xs text-emerald-300">
+                      ✅ Aktif plan: <b>{entitlement.owner ? "OWNER (sınırsız)" : entitlement.plan}</b>
+                      {entitlement.expiresAt && (
+                        <> · Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}</>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-card/60 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-foreground">Basic</div>
+                        <div className="text-xs font-bold text-foreground">50 ₺</div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">1 ay</div>
+                      <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                        <li>✓ Gemini 3 Flash</li>
+                        <li>✓ GPT-5 Mini</li>
+                        <li className="opacity-60">✗ KıvançAI Pro</li>
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => alert("Ödeme akışı yakında. Şimdilik sahibinden hediye iste 🎁")}
+                        className="mt-3 w-full rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-accent"
+                      >
+                        Satın Al (yakında)
+                      </button>
+                    </div>
+                    <div className="rounded-lg border border-amber-400/50 bg-amber-400/10 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-amber-400">Full Access</div>
+                        <div className="text-xs font-bold text-amber-400">200 ₺</div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">3 ay</div>
+                      <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                        <li>✓ Tüm modeller</li>
+                        <li>✓ KıvançAI Pro 🎁</li>
+                        <li>✓ Sınırsız persona</li>
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => alert("Ödeme akışı yakında. Şimdilik sahibinden hediye iste 🎁")}
+                        className="mt-3 w-full rounded-md bg-amber-400 px-3 py-1.5 text-xs font-semibold text-black hover:opacity-90"
+                      >
+                        Satın Al (yakında)
+                      </button>
+                    </div>
+                  </div>
+
+                  {entitlement.owner && (
+                    <div className="mt-4 rounded-lg border border-pink-400/40 bg-pink-400/5 p-3">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-pink-300">
+                        <Gift size={13} /> Hediye Et (sadece sahip)
+                      </div>
+                      <p className="mb-2 text-[11px] text-muted-foreground">
+                        E-posta gir, o kullanıcıya tam erişimi (tüm modeller + KıvançAI Pro) bedava ver.
+                      </p>
+                      <GiftForm onDone={() => undefined} />
+                    </div>
+                  )}
+                </div>
+              )}
               {quickPanel === "settings" && (
                 <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-background/80 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
