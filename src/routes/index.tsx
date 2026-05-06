@@ -2386,10 +2386,6 @@ function Index() {
                           )}
                         </div>
                         {MODELS.map((m, idx) => {
-                          const isAllowed =
-                            entitlement.allowedModels === "all" ||
-                            (entitlement.allowedModels as string[]).includes(m.id) ||
-                            !m.premium === false /* keep premium lock check below */;
                           const allowedList = entitlement.allowedModels;
                           const locked = !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
                           // KıvançAI Pro: hediye işareti (sadece owner görür)
