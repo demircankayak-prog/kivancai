@@ -267,6 +267,60 @@ const SETTINGS_ITEMS = [
   { label: "Yardım", icon: HelpCircle, detail: "Destek merkezi" },
 ];
 
+function GiftForm({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState("");
+  const [months, setMonths] = useState(3);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const submit = async () => {
+    if (!email.trim()) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await grantGift({ data: { email: email.trim(), months } });
+      setMsg(`✅ Hediye verildi! Bitiş: ${new Date(r.expiresAt).toLocaleDateString("tr-TR")}`);
+      setEmail("");
+      onDone();
+    } catch (e) {
+      setMsg(`❌ ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="hediye@edilecek.com"
+        className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+      />
+      <div className="flex items-center gap-2">
+        <select
+          value={months}
+          onChange={(e) => setMonths(Number(e.target.value))}
+          className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+        >
+          <option value={1}>1 ay</option>
+          <option value={3}>3 ay</option>
+          <option value={6}>6 ay</option>
+          <option value={12}>12 ay</option>
+        </select>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy}
+          className="h-8 flex-1 rounded-md bg-pink-400 px-3 text-xs font-semibold text-black hover:opacity-90 disabled:opacity-50"
+        >
+          {busy ? "Gönderiliyor…" : "🎁 Hediye Et"}
+        </button>
+      </div>
+      {msg && <div className="text-[11px] text-muted-foreground">{msg}</div>}
+    </div>
+  );
+}
+
 function Index() {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
