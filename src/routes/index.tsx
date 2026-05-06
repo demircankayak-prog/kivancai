@@ -329,18 +329,6 @@ function Index() {
   const [streaming, setStreaming] = useState(false);
   const [modelKey, setModelKey] = useState(MODELS[0].label);
   const selectedModel = MODELS.find((m) => m.label === modelKey) ?? MODELS[0];
-
-  // Entitlement değiştiğinde, seçili model artık kilitliyse erişilebilir bir modele düş
-  useEffect(() => {
-    const allowed = entitlement.allowedModels;
-    const isAllowed = allowed === "all" || (Array.isArray(allowed) && allowed.includes(selectedModel.id));
-    if (!isAllowed) {
-      const fallback = MODELS.find((m) =>
-        allowed === "all" ? true : Array.isArray(allowed) && allowed.includes(m.id),
-      );
-      if (fallback) setModelKey(fallback.label);
-    }
-  }, [entitlement, selectedModel.id]);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [savedChats, setSavedChats] = useState<
     Array<{ id: string; title: string; messages: Msg[] }>
