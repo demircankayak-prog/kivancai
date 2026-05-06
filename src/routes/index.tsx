@@ -40,6 +40,8 @@ import {
   MonitorUp,
   PhoneOff,
   Camera,
+  ShoppingBag,
+  Gift,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +53,7 @@ import {
   revokeApiKey,
   savePersona,
   getPersona,
+  grantGift,
 } from "@/server/premium.functions";
 
 export const Route = createFileRoute("/")({
@@ -321,7 +324,7 @@ function Index() {
   );
 
   // Premium / API key / persona
-  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null }>({ premium: false, owner: false, plan: null, expiresAt: null });
+  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null; allowedModels: string[] | "all" }>({ premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] });
   const [persona, setPersona] = useState("");
   const [personaSaving, setPersonaSaving] = useState(false);
   const [personaSavedAt, setPersonaSavedAt] = useState<number | null>(null);
@@ -332,7 +335,7 @@ function Index() {
 
   useEffect(() => {
     if (!user) {
-      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null });
+      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] });
       setPersona("");
       setApiKeyMeta(null);
       return;
