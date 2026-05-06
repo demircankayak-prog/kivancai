@@ -1648,10 +1648,20 @@ function Index() {
                 E-posta ile Giriş
               </button>
             ) : (
-              <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
-                <p className="font-semibold text-foreground">{displayName}</p>
-                <p className="truncate text-muted-foreground">{user.email}</p>
-              </div>
+              <>
+                <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
+                  <p className="font-semibold text-foreground">{displayName}</p>
+                  <p className="truncate text-muted-foreground">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openQuickPanel("shop")}
+                  className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 text-xs font-semibold text-amber-400 transition hover:border-amber-400 hover:bg-amber-400/20"
+                >
+                  <ShoppingBag size={14} /> Mağaza
+                  {entitlement.owner && <Gift size={12} className="text-pink-400" />}
+                </button>
+              </>
             )}
 
             <div className="mt-5 flex-1 overflow-y-auto">
