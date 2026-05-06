@@ -311,7 +311,7 @@ function Index() {
   const vadRafRef = useRef<number | null>(null);
   const [screenHelpLoading, setScreenHelpLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
+  const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings" | "shop">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState("");
   const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
@@ -386,7 +386,7 @@ function Index() {
     setTimeout(() => setKeyCopied(false), 1500);
   };
 
-  const openQuickPanel = (panel: "image" | "video" | "settings") => {
+  const openQuickPanel = (panel: "image" | "video" | "settings" | "shop") => {
     setModelMenuOpen(false);
     setQuickPanel((q) => (q === panel ? null : panel));
     setQuickPrompt("");
