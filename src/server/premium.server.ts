@@ -3,9 +3,41 @@ import { randomBytes, createHash, timingSafeEqual } from "crypto";
 
 const ownerEmail = () => (process.env.OWNER_EMAIL || "").trim().toLowerCase();
 
+export const BASIC_ALLOWED_MODELS = [
+  "google/gemini-3-flash-preview",
+  "openai/gpt-5-mini",
+];
+export const FREE_ALLOWED_MODELS = ["google/gemini-2.5-flash-lite"];
+
+export type Entitlement = {
+  premium: boolean;
+  owner: boolean;
+  plan: "owner" | "full" | "basic" | "gift_full" | null;
+  expiresAt: string | null;
+  allowedModels: string[] | "all";
+};
+
 export async function isOwnerOrPremium(userId: string, email: string | null) {
+  return getEntitlement(userId, email);
+}
+
+export async function getEntitlement(userId: string, email: string | null): Promise<Entitlement> {
   if (email && ownerEmail() && email.toLowerCase() === ownerEmail()) {
-    return { premium: true, owner: true, plan: "owner" as const, expiresAt: null as string | null };
+    return { premium: true, owner: true, plan: "owner", expiresAt: null, allowedModels: "all" };
+  }
+  // Hediye var mı?
+  if (email) {
+    const { data: gift } = await supabaseAdmin
+      .from("gift_grants")
+      .select("plan,expires_at")
+      .ilike("email", email)
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (gift) {
+      return { premium: true, owner: false, plan: "gift_full", expiresAt: gift.expires_at as string, allowedModels: "all" };
+    }
   }
   const { data } = await supabaseAdmin
     .from("subscriptions")
@@ -17,9 +49,16 @@ export async function isOwnerOrPremium(userId: string, email: string | null) {
     .limit(1)
     .maybeSingle();
   if (data) {
-    return { premium: true, owner: false, plan: data.plan as string, expiresAt: data.current_period_end as string };
+    const plan = data.plan as "full" | "basic";
+    return {
+      premium: true,
+      owner: false,
+      plan,
+      expiresAt: data.current_period_end as string,
+      allowedModels: plan === "full" ? "all" : [...BASIC_ALLOWED_MODELS, ...FREE_ALLOWED_MODELS],
+    };
   }
-  return { premium: false, owner: false, plan: null, expiresAt: null };
+  return { premium: false, owner: false, plan: null, expiresAt: null, allowedModels: FREE_ALLOWED_MODELS };
 }
 
 export function generatePlainKey() {
