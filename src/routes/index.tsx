@@ -399,6 +399,19 @@ function Index() {
     getApiKeyMeta().then((r) => setApiKeyMeta(r.meta as typeof apiKeyMeta)).catch(() => undefined);
   }, [user]);
 
+  // Seçili model kilitlenmişse erişilebilir bir modele düş
+  useEffect(() => {
+    const allowed = entitlement.allowedModels;
+    const isAllowed =
+      allowed === "all" || (Array.isArray(allowed) && allowed.includes(selectedModel.id));
+    if (!isAllowed) {
+      const fallback = MODELS.find((m) =>
+        allowed === "all" ? true : Array.isArray(allowed) && allowed.includes(m.id),
+      );
+      if (fallback) setModelKey(fallback.label);
+    }
+  }, [entitlement, selectedModel.id]);
+
   const handleSavePersona = async () => {
     setPersonaSaving(true);
     try {
