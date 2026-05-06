@@ -2242,7 +2242,14 @@ function Index() {
                           )}
                         </div>
                         {MODELS.map((m, idx) => {
-                          const locked = !!m.premium && !entitlement.premium;
+                          const isAllowed =
+                            entitlement.allowedModels === "all" ||
+                            (entitlement.allowedModels as string[]).includes(m.id) ||
+                            !m.premium === false /* keep premium lock check below */;
+                          const allowedList = entitlement.allowedModels;
+                          const locked = !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
+                          // KıvançAI Pro: hediye işareti (sadece owner görür)
+                          const showGiftBadge = m.id === "kivancai_pro" && entitlement.owner;
                           return (
                           <button
                             key={`${m.label}-${idx}`}
@@ -2254,7 +2261,7 @@ function Index() {
                                 setModelMenuOpen(false);
                               } else if (locked) {
                                 setModelMenuOpen(false);
-                                openQuickPanel("settings");
+                                openQuickPanel("shop");
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
@@ -2267,12 +2274,13 @@ function Index() {
                             <div className="flex w-full items-center justify-between">
                               <span className="flex items-center gap-1.5 font-medium">
                                 {m.label}
-                                {m.premium && (
-                                  locked ? (
-                                    <Lock size={11} className="text-muted-foreground" />
-                                  ) : (
-                                    <Crown size={11} className="text-amber-400" />
-                                  )
+                                {locked ? (
+                                  <Lock size={11} className="text-muted-foreground" />
+                                ) : m.premium ? (
+                                  <Crown size={11} className="text-amber-400" />
+                                ) : null}
+                                {showGiftBadge && (
+                                  <Gift size={11} className="text-pink-400" />
                                 )}
                               </span>
                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -2287,7 +2295,7 @@ function Index() {
                             )}
                             {locked && (
                               <span className="mt-1 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
-                                🔒 PREMIUM — tıkla & üyelik aç
+                                🔒 KİLİTLİ — Mağazadan plan al
                               </span>
                             )}
                           </button>
