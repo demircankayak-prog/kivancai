@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_grants: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          granted_by: string | null
+          id: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          granted_by?: string | null
+          id?: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          granted_by?: string | null
+          id?: string
+          plan?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

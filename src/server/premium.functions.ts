@@ -2,13 +2,55 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
-import { isOwnerOrPremium, generatePlainKey, hashKey } from "./premium.server";
+import { getEntitlement as srvGetEntitlement, generatePlainKey, hashKey } from "./premium.server";
 
 export const getEntitlement = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId, claims } = context as { userId: string; claims: { email?: string } };
-    return isOwnerOrPremium(userId, claims?.email ?? null);
+    return srvGetEntitlement(userId, claims?.email ?? null);
+  });
+
+const ownerEmailLc = () => (process.env.OWNER_EMAIL || "").trim().toLowerCase();
+
+const giftSchema = z.object({
+  email: z.string().email(),
+  months: z.number().int().min(1).max(36).default(3),
+});
+
+export const grantGift = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => giftSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId, claims } = context as { userId: string; claims: { email?: string } };
+    const callerEmail = (claims?.email ?? "").toLowerCase();
+    if (!ownerEmailLc() || callerEmail !== ownerEmailLc()) {
+      throw new Error("Sadece uygulama sahibi hediye verebilir.");
+    }
+    const expires = new Date();
+    expires.setMonth(expires.getMonth() + data.months);
+    const { error } = await supabaseAdmin.from("gift_grants").insert({
+      email: data.email.toLowerCase(),
+      plan: "gift_full",
+      expires_at: expires.toISOString(),
+      granted_by: userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, expiresAt: expires.toISOString() };
+  });
+
+export const listGifts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { claims } = context as { claims: { email?: string } };
+    const callerEmail = (claims?.email ?? "").toLowerCase();
+    if (!ownerEmailLc() || callerEmail !== ownerEmailLc()) return { gifts: [] };
+    const { data } = await supabaseAdmin
+      .from("gift_grants")
+      .select("id,email,plan,expires_at,created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { gifts: data ?? [] };
   });
 
 export const generateApiKey = createServerFn({ method: "POST" })

@@ -40,6 +40,8 @@ import {
   MonitorUp,
   PhoneOff,
   Camera,
+  ShoppingBag,
+  Gift,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +53,7 @@ import {
   revokeApiKey,
   savePersona,
   getPersona,
+  grantGift,
 } from "@/server/premium.functions";
 
 export const Route = createFileRoute("/")({
@@ -264,6 +267,60 @@ const SETTINGS_ITEMS = [
   { label: "Yardım", icon: HelpCircle, detail: "Destek merkezi" },
 ];
 
+function GiftForm({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState("");
+  const [months, setMonths] = useState(3);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const submit = async () => {
+    if (!email.trim()) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await grantGift({ data: { email: email.trim(), months } });
+      setMsg(`✅ Hediye verildi! Bitiş: ${new Date(r.expiresAt).toLocaleDateString("tr-TR")}`);
+      setEmail("");
+      onDone();
+    } catch (e) {
+      setMsg(`❌ ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="hediye@edilecek.com"
+        className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+      />
+      <div className="flex items-center gap-2">
+        <select
+          value={months}
+          onChange={(e) => setMonths(Number(e.target.value))}
+          className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+        >
+          <option value={1}>1 ay</option>
+          <option value={3}>3 ay</option>
+          <option value={6}>6 ay</option>
+          <option value={12}>12 ay</option>
+        </select>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy}
+          className="h-8 flex-1 rounded-md bg-pink-400 px-3 text-xs font-semibold text-black hover:opacity-90 disabled:opacity-50"
+        >
+          {busy ? "Gönderiliyor…" : "🎁 Hediye Et"}
+        </button>
+      </div>
+      {msg && <div className="text-[11px] text-muted-foreground">{msg}</div>}
+    </div>
+  );
+}
+
 function Index() {
   const navigate = useNavigate();
   const { user, profile, signOut, loading } = useAuth();
@@ -308,7 +365,7 @@ function Index() {
   const vadRafRef = useRef<number | null>(null);
   const [screenHelpLoading, setScreenHelpLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings">(null);
+  const [quickPanel, setQuickPanel] = useState<null | "image" | "video" | "settings" | "shop">(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState("");
   const [videoDuration, setVideoDuration] = useState<5 | 10>(5);
@@ -321,7 +378,9 @@ function Index() {
   );
 
   // Premium / API key / persona
-  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null }>({ premium: false, owner: false, plan: null, expiresAt: null });
+  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null; allowedModels: string[] | "all" }>(
+    { premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] as string[] | "all" },
+  );
   const [persona, setPersona] = useState("");
   const [personaSaving, setPersonaSaving] = useState(false);
   const [personaSavedAt, setPersonaSavedAt] = useState<number | null>(null);
@@ -332,7 +391,7 @@ function Index() {
 
   useEffect(() => {
     if (!user) {
-      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null });
+      setEntitlement({ premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] });
       setPersona("");
       setApiKeyMeta(null);
       return;
@@ -341,6 +400,18 @@ function Index() {
     getPersona().then((r) => setPersona(r.persona || "")).catch(() => undefined);
     getApiKeyMeta().then((r) => setApiKeyMeta(r.meta as typeof apiKeyMeta)).catch(() => undefined);
   }, [user]);
+
+  // Seçili model kilitlenmişse erişilebilir bir modele düş
+  useEffect(() => {
+    const allowed = entitlement.allowedModels as string[] | "all";
+    const all = allowed === "all";
+    const list = Array.isArray(allowed) ? allowed : [];
+    const isAllowed = all || list.includes(selectedModel.id);
+    if (!isAllowed) {
+      const fallback = MODELS.find((m) => all || list.includes(m.id));
+      if (fallback) setModelKey(fallback.label);
+    }
+  }, [entitlement, selectedModel.id]);
 
   const handleSavePersona = async () => {
     setPersonaSaving(true);
@@ -383,7 +454,7 @@ function Index() {
     setTimeout(() => setKeyCopied(false), 1500);
   };
 
-  const openQuickPanel = (panel: "image" | "video" | "settings") => {
+  const openQuickPanel = (panel: "image" | "video" | "settings" | "shop") => {
     setModelMenuOpen(false);
     setQuickPanel((q) => (q === panel ? null : panel));
     setQuickPrompt("");
@@ -1591,10 +1662,20 @@ function Index() {
                 E-posta ile Giriş
               </button>
             ) : (
-              <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
-                <p className="font-semibold text-foreground">{displayName}</p>
-                <p className="truncate text-muted-foreground">{user.email}</p>
-              </div>
+              <>
+                <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
+                  <p className="font-semibold text-foreground">{displayName}</p>
+                  <p className="truncate text-muted-foreground">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openQuickPanel("shop")}
+                  className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 text-xs font-semibold text-amber-400 transition hover:border-amber-400 hover:bg-amber-400/20"
+                >
+                  <ShoppingBag size={14} /> Mağaza
+                  {entitlement.owner && <Gift size={12} className="text-pink-400" />}
+                </button>
+              </>
             )}
 
             <div className="mt-5 flex-1 overflow-y-auto">
@@ -1845,7 +1926,7 @@ function Index() {
                 hidden
                 onChange={handleFileSelect}
               />
-              {quickPanel && quickPanel !== "settings" && (
+              {quickPanel && quickPanel !== "settings" && quickPanel !== "shop" && (
                 <div className="mb-3 rounded-xl border border-brand/40 bg-brand/5 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold text-brand">
@@ -1944,6 +2025,85 @@ function Index() {
                   </div>
                 </div>
               )}
+              {quickPanel === "shop" && (
+                <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-amber-400/40 bg-background/90 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
+                      <ShoppingBag size={15} /> KıvançAI Mağaza
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPanel(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {entitlement.premium && (
+                    <div className="mb-3 rounded-md border border-emerald-400/30 bg-emerald-400/10 p-2 text-xs text-emerald-300">
+                      ✅ Aktif plan: <b>{entitlement.owner ? "OWNER (sınırsız)" : entitlement.plan}</b>
+                      {entitlement.expiresAt && (
+                        <> · Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}</>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-card/60 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-foreground">Basic</div>
+                        <div className="text-xs font-bold text-foreground">50 ₺</div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">1 ay</div>
+                      <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                        <li>✓ Gemini 3 Flash</li>
+                        <li>✓ GPT-5 Mini</li>
+                        <li className="opacity-60">✗ KıvançAI Pro</li>
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => alert("Ödeme akışı yakında. Şimdilik sahibinden hediye iste 🎁")}
+                        className="mt-3 w-full rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-accent"
+                      >
+                        Satın Al (yakında)
+                      </button>
+                    </div>
+                    <div className="rounded-lg border border-amber-400/50 bg-amber-400/10 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-amber-400">Full Access</div>
+                        <div className="text-xs font-bold text-amber-400">200 ₺</div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">3 ay</div>
+                      <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                        <li>✓ Tüm modeller</li>
+                        <li>✓ KıvançAI Pro 🎁</li>
+                        <li>✓ Sınırsız persona</li>
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => alert("Ödeme akışı yakında. Şimdilik sahibinden hediye iste 🎁")}
+                        className="mt-3 w-full rounded-md bg-amber-400 px-3 py-1.5 text-xs font-semibold text-black hover:opacity-90"
+                      >
+                        Satın Al (yakında)
+                      </button>
+                    </div>
+                  </div>
+
+                  {entitlement.owner && (
+                    <div className="mt-4 rounded-lg border border-pink-400/40 bg-pink-400/5 p-3">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-pink-300">
+                        <Gift size={13} /> Hediye Et (sadece sahip)
+                      </div>
+                      <p className="mb-2 text-[11px] text-muted-foreground">
+                        E-posta gir, o kullanıcıya tam erişimi (tüm modeller + KıvançAI Pro) bedava ver.
+                      </p>
+                      <GiftForm onDone={() => undefined} />
+                    </div>
+                  )}
+                </div>
+              )}
               {quickPanel === "settings" && (
                 <div className="mb-3 max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-background/80 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -1976,28 +2136,15 @@ function Index() {
                           <> Bitiş: {new Date(entitlement.expiresAt).toLocaleDateString("tr-TR")}.</>
                         )}
                       </p>
-                    ) : (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <button
-                          type="button"
-                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
-                          className="rounded-md border border-border bg-background p-2 text-left transition hover:border-amber-400/50"
-                        >
-                          <div className="text-sm font-semibold text-foreground">Basic</div>
-                          <div className="text-xs text-muted-foreground">50 ₺ / 1 ay</div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">2-3 premium model</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => alert("Ödeme akışı yakında — Stripe entegrasyonu aktive edilince burası canlanacak.")}
-                          className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-left transition hover:border-amber-400"
-                        >
-                          <div className="text-sm font-semibold text-amber-400">Full Access</div>
-                          <div className="text-xs text-muted-foreground">200 ₺ / 3 ay</div>
-                          <div className="mt-1 text-[10px] text-muted-foreground">Tüm modeller + KıvançAI Pro</div>
-                        </button>
-                      </div>
-                    )}
+                     ) : (
+                       <button
+                         type="button"
+                         onClick={() => openQuickPanel("shop")}
+                         className="flex w-full items-center justify-center gap-2 rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-sm font-semibold text-amber-400 transition hover:border-amber-400"
+                       >
+                         <ShoppingBag size={14} /> Mağazayı Aç
+                       </button>
+                     )}
                   </div>
 
                   {/* Persona */}
@@ -2239,7 +2386,10 @@ function Index() {
                           )}
                         </div>
                         {MODELS.map((m, idx) => {
-                          const locked = !!m.premium && !entitlement.premium;
+                          const allowedList = entitlement.allowedModels;
+                          const locked = !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
+                          // KıvançAI Pro: hediye işareti (sadece owner görür)
+                          const showGiftBadge = m.id === "kivancai_pro" && entitlement.owner;
                           return (
                           <button
                             key={`${m.label}-${idx}`}
@@ -2251,7 +2401,7 @@ function Index() {
                                 setModelMenuOpen(false);
                               } else if (locked) {
                                 setModelMenuOpen(false);
-                                openQuickPanel("settings");
+                                openQuickPanel("shop");
                               }
                             }}
                             className={`group relative flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition ${
@@ -2264,12 +2414,13 @@ function Index() {
                             <div className="flex w-full items-center justify-between">
                               <span className="flex items-center gap-1.5 font-medium">
                                 {m.label}
-                                {m.premium && (
-                                  locked ? (
-                                    <Lock size={11} className="text-muted-foreground" />
-                                  ) : (
-                                    <Crown size={11} className="text-amber-400" />
-                                  )
+                                {locked ? (
+                                  <Lock size={11} className="text-muted-foreground" />
+                                ) : m.premium ? (
+                                  <Crown size={11} className="text-amber-400" />
+                                ) : null}
+                                {showGiftBadge && (
+                                  <Gift size={11} className="text-pink-400" />
                                 )}
                               </span>
                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -2284,7 +2435,7 @@ function Index() {
                             )}
                             {locked && (
                               <span className="mt-1 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
-                                🔒 PREMIUM — tıkla & üyelik aç
+                                🔒 KİLİTLİ — Mağazadan plan al
                               </span>
                             )}
                           </button>
