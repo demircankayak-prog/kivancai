@@ -378,7 +378,9 @@ function Index() {
   );
 
   // Premium / API key / persona
-  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null; allowedModels: string[] | "all" }>({ premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] });
+  const [entitlement, setEntitlement] = useState<{ premium: boolean; owner: boolean; plan: string | null; expiresAt: string | null; allowedModels: string[] | "all" }>(
+    { premium: false, owner: false, plan: null, expiresAt: null, allowedModels: [] as string[] | "all" },
+  );
   const [persona, setPersona] = useState("");
   const [personaSaving, setPersonaSaving] = useState(false);
   const [personaSavedAt, setPersonaSavedAt] = useState<number | null>(null);
