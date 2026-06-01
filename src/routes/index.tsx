@@ -46,6 +46,13 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/kivancai-logo-circle.png";
+import chatgptIcon from "@/assets/models/chatgpt.webp.asset.json";
+import claudeIcon from "@/assets/models/claude.webp.asset.json";
+import grokIcon from "@/assets/models/grok.png.asset.json";
+import geminiIcon from "@/assets/models/gemini.png.asset.json";
+import deepseekIcon from "@/assets/models/deepseek.png.asset.json";
+import metaIcon from "@/assets/models/meta.png.asset.json";
+import mistralIcon from "@/assets/models/mistral.png.asset.json";
 import {
   getEntitlement,
   generateApiKey,
