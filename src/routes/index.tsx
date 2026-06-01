@@ -46,6 +46,13 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/kivancai-logo-circle.png";
+import chatgptIcon from "@/assets/models/chatgpt.webp.asset.json";
+import claudeIcon from "@/assets/models/claude.webp.asset.json";
+import grokIcon from "@/assets/models/grok.png.asset.json";
+import geminiIcon from "@/assets/models/gemini.png.asset.json";
+import deepseekIcon from "@/assets/models/deepseek.png.asset.json";
+import metaIcon from "@/assets/models/meta.png.asset.json";
+import mistralIcon from "@/assets/models/mistral.png.asset.json";
 import {
   getEntitlement,
   generateApiKey,
@@ -105,6 +112,7 @@ interface ModelOption {
   description: string;
   available: boolean;
   premium?: boolean;
+  iconUrl?: string;
 }
 
 const MODELS: ModelOption[] = [
@@ -122,6 +130,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "Hızlı, dengeli — günlük sorular için ideal",
     available: true,
+    iconUrl: geminiIcon.url,
   },
   {
     id: "google/gemini-3.1-pro-preview",
@@ -130,6 +139,7 @@ const MODELS: ModelOption[] = [
     description: "En güçlü Gemini — derin akıl yürütme",
     available: true,
     premium: true,
+    iconUrl: geminiIcon.url,
   },
   {
     id: "google/gemini-2.5-pro",
@@ -138,6 +148,7 @@ const MODELS: ModelOption[] = [
     description: "Görsel + uzun bağlam + karmaşık analiz",
     available: true,
     premium: true,
+    iconUrl: geminiIcon.url,
   },
   {
     id: "google/gemini-2.5-flash",
@@ -145,6 +156,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "Dengeli — hız ve kalite",
     available: true,
+    iconUrl: geminiIcon.url,
   },
   {
     id: "google/gemini-2.5-flash-lite",
@@ -152,6 +164,7 @@ const MODELS: ModelOption[] = [
     provider: "Google",
     description: "En hızlı — basit görevler için",
     available: true,
+    iconUrl: geminiIcon.url,
   },
   {
     id: "openai/gpt-5.2",
@@ -160,6 +173,7 @@ const MODELS: ModelOption[] = [
     description: "OpenAI'nin en yeni modeli — karmaşık problem çözme",
     available: true,
     premium: true,
+    iconUrl: chatgptIcon.url,
   },
   {
     id: "openai/gpt-5",
@@ -168,6 +182,7 @@ const MODELS: ModelOption[] = [
     description: "Güçlü çok yönlü — mükemmel akıl yürütme",
     available: true,
     premium: true,
+    iconUrl: chatgptIcon.url,
   },
   {
     id: "openai/gpt-5-mini",
@@ -175,6 +190,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "Orta düzey — düşük maliyet, iyi performans",
     available: true,
+    iconUrl: chatgptIcon.url,
   },
   {
     id: "openai/gpt-5-nano",
@@ -182,6 +198,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "Hız ve verimlilik için tasarlandı",
     available: true,
+    iconUrl: chatgptIcon.url,
   },
   {
     id: "openai/gpt-5",
@@ -189,6 +206,7 @@ const MODELS: ModelOption[] = [
     provider: "xAI",
     description: "Elon Musk'ın AI'si — gerçek zamanlı, esprili yanıtlar",
     available: true,
+    iconUrl: grokIcon.url,
   },
   {
     id: "openai/gpt-5",
@@ -196,6 +214,7 @@ const MODELS: ModelOption[] = [
     provider: "OpenAI",
     description: "ChatGPT'nin klasik gücü — günlük sohbet",
     available: true,
+    iconUrl: chatgptIcon.url,
   },
   {
     id: "google/gemini-2.5-pro",
@@ -203,6 +222,7 @@ const MODELS: ModelOption[] = [
     provider: "Anthropic",
     description: "Uzun yazı ve nüanslı yanıtlar — Anthropic kalitesi",
     available: true,
+    iconUrl: claudeIcon.url,
   },
   {
     id: "google/gemini-2.5-flash",
@@ -224,6 +244,7 @@ const MODELS: ModelOption[] = [
     provider: "Meta",
     description: "Açık kaynak dev model — Meta'nın gücü",
     available: true,
+    iconUrl: metaIcon.url,
   },
   {
     id: "openai/gpt-5-mini",
@@ -231,6 +252,7 @@ const MODELS: ModelOption[] = [
     provider: "Mistral",
     description: "Avrupa'nın güçlü modeli — kod ve mantık",
     available: true,
+    iconUrl: mistralIcon.url,
   },
   {
     id: "google/gemini-3.1-pro-preview",
@@ -238,6 +260,7 @@ const MODELS: ModelOption[] = [
     provider: "DeepSeek",
     description: "Derin akıl yürütme uzmanı",
     available: true,
+    iconUrl: deepseekIcon.url,
   },
 ];
 
