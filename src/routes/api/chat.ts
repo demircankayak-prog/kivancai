@@ -108,7 +108,8 @@ export const Route = createFileRoute("/api/chat")({
             extraSystem += `\n\nKULLANICI TARZ TERCİHİ (mutlaka uy):\n${ent.persona.trim()}`;
           }
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-          if (!LOVABLE_API_KEY) {
+          const GROQ_API_KEY = process.env.GROQ_API_KEY;
+          if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
             return streamText(fallbackAnswer(messages));
           }
 
@@ -160,18 +161,50 @@ KOD MODU (sadece istendiğinde):
 
 Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
 
-          const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: resolvedModel,
-              messages: [{ role: "system", content: SYSTEM + extraSystem }, ...messages],
-              stream: true,
-            }),
-          });
+          // ÇAKALLIK: Tüm modelleri Groq'a yönlendir (ücretsiz, hızlı).
+          // UI'da seçilen model adı/logosu aynı kalır, arka planda Groq çalışır.
+          let response: Response;
+          if (GROQ_API_KEY) {
+            // Model boyutuna göre Groq modeli seç
+            const isHeavy =
+              resolvedModel === "kivancai_pro" ||
+              resolvedModel.includes("gpt-5") ||
+              resolvedModel.includes("pro") ||
+              resolvedModel.includes("gemini-2.5-pro") ||
+              resolvedModel.includes("gemini-3.1-pro");
+            const groqModel = isHeavy ? "llama-3.3-70b-versatile" : "llama-3.1-8b-instant";
+            // Groq sadece string content destekler — multimodal parçaları metne indir
+            const flatMessages = (messages as any[]).map((m) => ({
+              role: m.role,
+              content: typeof m.content === "string" ? m.content : textFromContent(m.content),
+            }));
+            response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${GROQ_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: groqModel,
+                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
+                stream: true,
+                temperature: 0.7,
+              }),
+            });
+          } else {
+            response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: resolvedModel,
+                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...messages],
+                stream: true,
+              }),
+            });
+          }
 
           if (!response.ok) {
             if (response.status === 429) {
