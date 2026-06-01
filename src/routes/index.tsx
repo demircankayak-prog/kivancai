@@ -112,6 +112,7 @@ interface ModelOption {
   description: string;
   available: boolean;
   premium?: boolean;
+  iconUrl?: string;
 }
 
 const MODELS: ModelOption[] = [
