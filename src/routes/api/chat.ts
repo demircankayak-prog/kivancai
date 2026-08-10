@@ -6,8 +6,11 @@ const PREMIUM_MODEL_IDS = new Set<string>([
   "openai/gpt-5.2",
   "google/gemini-3.1-pro-preview",
   "google/gemini-2.5-pro",
-  "kivancai_pro",
 ]);
+
+// KıvançAI Pro 1 ay boyunca herkese ücretsiz (bu tarihe kadar premium gerekmez)
+const KIVANCAI_PRO_FREE_UNTIL = new Date("2026-09-10T00:00:00Z");
+const isProFreeNow = () => Date.now() < KIVANCAI_PRO_FREE_UNTIL.getTime();
 
 const KIVANCAI_PRO_SYSTEM = `Sen KıvançAI Pro'sun — gelişmiş geliştirici modu. Üst düzey yazılım mimarisi, derin akıl yürütme, üretim kalitesinde tam çalışır kod, performans ve güvenlik odaklısın. Kısaltma yapma, eksik bırakma, hata durumlarını ve uç vakaları kapsa. Dosya/dizin yapısı, kurulum adımları, çalıştırma komutları ve test örneği ekle.`;
 
