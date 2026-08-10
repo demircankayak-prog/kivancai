@@ -116,6 +116,7 @@ interface ModelOption {
 }
 
 const MODELS: ModelOption[] = [
+  // KıvançAI Pro tanıtım dönemi: bu tarihe kadar herkese ücretsiz
   {
     id: "kivancai_pro",
     label: "KıvançAI Pro",
