@@ -11,7 +11,7 @@ export const getEntitlement = createServerFn({ method: "GET" })
   });
 
 const srv = async () => await import("@/server/premium.server");
-const admin = async () => (await import("@/integrations/supabase/client.server")).(await admin());
+const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 
 const ownerEmailLc = () => (process.env.OWNER_EMAIL || "").trim().toLowerCase();
 
