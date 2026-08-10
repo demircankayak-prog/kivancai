@@ -9,49 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiVideoRouteImport } from './routes/api/video'
-import { Route as ApiTtsRouteImport } from './routes/api/tts'
-import { Route as ApiSttRouteImport } from './routes/api/stt'
-import { Route as ApiScreenHelpRouteImport } from './routes/api/screen-help'
-import { Route as ApiImageRouteImport } from './routes/api/image'
-import { Route as ApiCustomChatRouteImport } from './routes/api/custom-chat'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiCustomChatRouteImport } from './routes/api/custom-chat'
+import { Route as ApiImageRouteImport } from './routes/api/image'
+import { Route as ApiScreenHelpRouteImport } from './routes/api/screen-help'
+import { Route as ApiSttRouteImport } from './routes/api/stt'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
+import { Route as ApiVideoRouteImport } from './routes/api/video'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiVideoRoute = ApiVideoRouteImport.update({
-  id: '/api/video',
-  path: '/api/video',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSttRoute = ApiSttRouteImport.update({
-  id: '/api/stt',
-  path: '/api/stt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiScreenHelpRoute = ApiScreenHelpRouteImport.update({
-  id: '/api/screen-help',
-  path: '/api/screen-help',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiImageRoute = ApiImageRouteImport.update({
-  id: '/api/image',
-  path: '/api/image',
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCustomChatRoute = ApiCustomChatRouteImport.update({
@@ -59,9 +39,29 @@ const ApiCustomChatRoute = ApiCustomChatRouteImport.update({
   path: '/api/custom-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiChatRoute = ApiChatRouteImport.update({
-  id: '/api/chat',
-  path: '/api/chat',
+const ApiImageRoute = ApiImageRouteImport.update({
+  id: '/api/image',
+  path: '/api/image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiScreenHelpRoute = ApiScreenHelpRouteImport.update({
+  id: '/api/screen-help',
+  path: '/api/screen-help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSttRoute = ApiSttRouteImport.update({
+  id: '/api/stt',
+  path: '/api/stt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVideoRoute = ApiVideoRouteImport.update({
+  id: '/api/video',
+  path: '/api/video',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -149,13 +149,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -163,39 +156,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/video': {
-      id: '/api/video'
-      path: '/api/video'
-      fullPath: '/api/video'
-      preLoaderRoute: typeof ApiVideoRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/stt': {
-      id: '/api/stt'
-      path: '/api/stt'
-      fullPath: '/api/stt'
-      preLoaderRoute: typeof ApiSttRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/screen-help': {
-      id: '/api/screen-help'
-      path: '/api/screen-help'
-      fullPath: '/api/screen-help'
-      preLoaderRoute: typeof ApiScreenHelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/image': {
-      id: '/api/image'
-      path: '/api/image'
-      fullPath: '/api/image'
-      preLoaderRoute: typeof ApiImageRouteImport
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/custom-chat': {
@@ -205,11 +177,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCustomChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteImport
+    '/api/image': {
+      id: '/api/image'
+      path: '/api/image'
+      fullPath: '/api/image'
+      preLoaderRoute: typeof ApiImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/screen-help': {
+      id: '/api/screen-help'
+      path: '/api/screen-help'
+      fullPath: '/api/screen-help'
+      preLoaderRoute: typeof ApiScreenHelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stt': {
+      id: '/api/stt'
+      path: '/api/stt'
+      fullPath: '/api/stt'
+      preLoaderRoute: typeof ApiSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/video': {
+      id: '/api/video'
+      path: '/api/video'
+      fullPath: '/api/video'
+      preLoaderRoute: typeof ApiVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

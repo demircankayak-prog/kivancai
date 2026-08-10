@@ -62,7 +62,7 @@ import {
   savePersona,
   getPersona,
   grantGift,
-} from "@/server/premium.functions";
+} from "@/lib/premium.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
