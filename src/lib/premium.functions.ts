@@ -6,7 +6,7 @@ export const getEntitlement = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId, claims } = context as { userId: string; claims: { email?: string } };
-    const { getEntitlement: srvGetEntitlement } = import("@/server/premium.server");
+    const { getEntitlement: srvGetEntitlement } = await import("@/server/premium.server");
     return srvGetEntitlement(userId, claims?.email ?? null);
   });
 
@@ -51,7 +51,7 @@ export const generateApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context as { userId: string };
-    const { generatePlainKey, hashKey } = import("@/server/premium.server");
+    const { generatePlainKey, hashKey } = await import("@/server/premium.server");
     const plain = generatePlainKey();
     const hash = hashKey(plain);
     const prefix = plain.slice(0, 8);
