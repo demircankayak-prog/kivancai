@@ -115,8 +115,9 @@ interface ModelOption {
   iconUrl?: string;
 }
 
+const PRO_FREE_UNTIL = new Date("2026-09-10T00:00:00Z").getTime();
+
 const MODELS: ModelOption[] = [
-  // KıvançAI Pro tanıtım dönemi: bu tarihe kadar herkese ücretsiz
   {
     id: "kivancai_pro",
     label: "KıvançAI Pro",
