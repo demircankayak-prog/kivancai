@@ -42,6 +42,7 @@ import {
   Camera,
   ShoppingBag,
   Gift,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,12 +116,14 @@ interface ModelOption {
   iconUrl?: string;
 }
 
+const PRO_FREE_UNTIL = new Date("2026-09-10T00:00:00Z").getTime();
+
 const MODELS: ModelOption[] = [
   {
     id: "kivancai_pro",
     label: "KıvançAI Pro",
     provider: "KıvançAI",
-    description: "Geliştirici Modu — derin akıl yürütme + production kalitesinde kod",
+    description: "Geliştirici Modu — sınırsız (1 ay ücretsiz, OpenRouter destekli)",
     available: true,
     premium: true,
   },
@@ -1757,6 +1760,15 @@ function Index() {
             </div>
 
             <div className="flex items-center gap-3">
+              <a
+                href="/kivancai-desktop.zip"
+                download
+                className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition hover:bg-accent"
+                aria-label="Masaüstü uygulamasını indir"
+                title="Masaüstü (.exe) paketini indir"
+              >
+                <Download size={16} />
+              </a>
               {user ? (
                 <div className="flex items-center gap-2">
                   <span className="hidden text-sm font-medium text-foreground sm:inline">
@@ -2410,7 +2422,10 @@ function Index() {
                         </div>
                         {MODELS.map((m, idx) => {
                           const allowedList = entitlement.allowedModels;
-                          const locked = !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
+                          const proFree = m.id === "kivancai_pro" && Date.now() < PRO_FREE_UNTIL;
+                          const locked =
+                            !proFree &&
+                            !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
                           // KıvançAI Pro: hediye işareti (sadece owner görür)
                           const showGiftBadge = m.id === "kivancai_pro" && entitlement.owner;
                           return (
@@ -2442,6 +2457,11 @@ function Index() {
                                 ) : m.premium ? (
                                   <Crown size={11} className="text-amber-400" />
                                 ) : null}
+                                {proFree && (
+                                  <span className="rounded bg-emerald-400/15 px-1 py-px text-[9px] font-semibold text-emerald-400">
+                                    1 AY ÜCRETSİZ
+                                  </span>
+                                )}
                                 {showGiftBadge && (
                                   <Gift size={11} className="text-pink-400" />
                                 )}

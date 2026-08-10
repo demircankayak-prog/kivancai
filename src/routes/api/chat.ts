@@ -6,8 +6,11 @@ const PREMIUM_MODEL_IDS = new Set<string>([
   "openai/gpt-5.2",
   "google/gemini-3.1-pro-preview",
   "google/gemini-2.5-pro",
-  "kivancai_pro",
 ]);
+
+// KıvançAI Pro 1 ay boyunca herkese ücretsiz (bu tarihe kadar premium gerekmez)
+const KIVANCAI_PRO_FREE_UNTIL = new Date("2026-09-10T00:00:00Z");
+const isProFreeNow = () => Date.now() < KIVANCAI_PRO_FREE_UNTIL.getTime();
 
 const KIVANCAI_PRO_SYSTEM = `Sen KıvançAI Pro'sun — gelişmiş geliştirici modu. Üst düzey yazılım mimarisi, derin akıl yürütme, üretim kalitesinde tam çalışır kod, performans ve güvenlik odaklısın. Kısaltma yapma, eksik bırakma, hata durumlarını ve uç vakaları kapsa. Dosya/dizin yapısı, kurulum adımları, çalıştırma komutları ve test örneği ekle.`;
 
@@ -95,12 +98,13 @@ export const Route = createFileRoute("/api/chat")({
           // Premium gate
           let resolvedModel = model || "google/gemini-3-flash-preview";
           let extraSystem = "";
+          let useOpenRouter = false;
           if (resolvedModel === "kivancai_pro") {
-            if (!ent.premium) {
+            if (!ent.premium && !isProFreeNow()) {
               return streamText("Bu model (KıvançAI Pro) sadece premium üyeler için. Ayarlardan üyelik açabilirsin kanka.");
             }
             extraSystem = "\n\n" + KIVANCAI_PRO_SYSTEM;
-            resolvedModel = "openai/gpt-5";
+            useOpenRouter = true;
           } else if (PREMIUM_MODEL_IDS.has(resolvedModel) && !ent.premium) {
             return streamText("Bu model premium üyelere özel kanka. Ayarlar → Premium üyelik kısmından açabilirsin.");
           }
@@ -109,7 +113,8 @@ export const Route = createFileRoute("/api/chat")({
           }
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
           const GROQ_API_KEY = process.env.GROQ_API_KEY;
-          if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
+          const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+          if (!LOVABLE_API_KEY && !GROQ_API_KEY && !(useOpenRouter && OPENROUTER_API_KEY)) {
             return streamText(fallbackAnswer(messages));
           }
 
@@ -164,7 +169,50 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
           // ÇAKALLIK: Tüm modelleri Groq'a yönlendir (ücretsiz, hızlı).
           // UI'da seçilen model adı/logosu aynı kalır, arka planda Groq çalışır.
           let response: Response;
-          if (GROQ_API_KEY) {
+          if (useOpenRouter && OPENROUTER_API_KEY) {
+            // KıvançAI Pro → OpenRouter (kullanıcının kendi anahtarı, sınırsız)
+            const flatMessages = (messages as any[]).map((m) => ({
+              role: m.role,
+              content: typeof m.content === "string" ? m.content : textFromContent(m.content),
+            }));
+            response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "X-Title": "KivancAI",
+              },
+              body: JSON.stringify({
+                model: "openai/gpt-4o-mini",
+                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
+                stream: true,
+              }),
+            });
+            if (!response.ok) {
+              const errText = await response.text();
+              console.error("openrouter error:", response.status, errText);
+              if (GROQ_API_KEY) {
+                const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${GROQ_API_KEY}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
+                    stream: true,
+                    temperature: 0.7,
+                  }),
+                });
+                if (groqRes.ok) {
+                  return new Response(groqRes.body, { headers: { "Content-Type": "text/event-stream" } });
+                }
+              }
+              return streamText(fallbackAnswer(messages));
+            }
+            return new Response(response.body, { headers: { "Content-Type": "text/event-stream" } });
+          } else if (GROQ_API_KEY) {
             // Model boyutuna göre Groq modeli seç
             const isHeavy =
               resolvedModel === "kivancai_pro" ||
