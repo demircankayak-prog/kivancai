@@ -2410,7 +2410,10 @@ function Index() {
                         </div>
                         {MODELS.map((m, idx) => {
                           const allowedList = entitlement.allowedModels;
-                          const locked = !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
+                          const proFree = m.id === "kivancai_pro" && Date.now() < PRO_FREE_UNTIL;
+                          const locked =
+                            !proFree &&
+                            !(allowedList === "all" || (Array.isArray(allowedList) && allowedList.includes(m.id)));
                           // KıvançAI Pro: hediye işareti (sadece owner görür)
                           const showGiftBadge = m.id === "kivancai_pro" && entitlement.owner;
                           return (
@@ -2442,6 +2445,11 @@ function Index() {
                                 ) : m.premium ? (
                                   <Crown size={11} className="text-amber-400" />
                                 ) : null}
+                                {proFree && (
+                                  <span className="rounded bg-emerald-400/15 px-1 py-px text-[9px] font-semibold text-emerald-400">
+                                    1 AY ÜCRETSİZ
+                                  </span>
+                                )}
                                 {showGiftBadge && (
                                   <Gift size={11} className="text-pink-400" />
                                 )}
