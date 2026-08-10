@@ -120,7 +120,7 @@ const MODELS: ModelOption[] = [
     id: "kivancai_pro",
     label: "KıvançAI Pro",
     provider: "KıvançAI",
-    description: "Geliştirici Modu — derin akıl yürütme + production kalitesinde kod",
+    description: "Geliştirici Modu — sınırsız (1 ay ücretsiz, OpenRouter destekli)",
     available: true,
     premium: true,
   },
