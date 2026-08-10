@@ -1367,13 +1367,8 @@ function Index() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const requireAuth = () => {
-    if (!user) {
-      navigate({ to: "/auth" });
-      return false;
-    }
-    return true;
-  };
+  // Misafir modu: giriş zorunlu değil, herkes mesaj yazabilir.
+  const requireAuth = () => true;
 
   const sendMessage = async (text: string) => {
     if (
@@ -2340,9 +2335,7 @@ function Index() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  user
-                    ? "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')"
-                    : "Mesaj göndermek için giriş yap…"
+                  "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')"
                 }
                 className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
               />
