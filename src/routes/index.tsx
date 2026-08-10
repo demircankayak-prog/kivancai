@@ -1759,6 +1759,15 @@ function Index() {
             </div>
 
             <div className="flex items-center gap-3">
+              <a
+                href="/kivancai-desktop.zip"
+                download
+                className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition hover:bg-accent"
+                aria-label="Masaüstü uygulamasını indir"
+                title="Masaüstü (.exe) paketini indir"
+              >
+                <Download size={16} />
+              </a>
               {user ? (
                 <div className="flex items-center gap-2">
                   <span className="hidden text-sm font-medium text-foreground sm:inline">
