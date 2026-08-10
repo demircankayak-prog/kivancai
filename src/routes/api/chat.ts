@@ -98,12 +98,13 @@ export const Route = createFileRoute("/api/chat")({
           // Premium gate
           let resolvedModel = model || "google/gemini-3-flash-preview";
           let extraSystem = "";
+          let useOpenRouter = false;
           if (resolvedModel === "kivancai_pro") {
-            if (!ent.premium) {
+            if (!ent.premium && !isProFreeNow()) {
               return streamText("Bu model (KıvançAI Pro) sadece premium üyeler için. Ayarlardan üyelik açabilirsin kanka.");
             }
             extraSystem = "\n\n" + KIVANCAI_PRO_SYSTEM;
-            resolvedModel = "openai/gpt-5";
+            useOpenRouter = true;
           } else if (PREMIUM_MODEL_IDS.has(resolvedModel) && !ent.premium) {
             return streamText("Bu model premium üyelere özel kanka. Ayarlar → Premium üyelik kısmından açabilirsin.");
           }
@@ -112,7 +113,8 @@ export const Route = createFileRoute("/api/chat")({
           }
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
           const GROQ_API_KEY = process.env.GROQ_API_KEY;
-          if (!LOVABLE_API_KEY && !GROQ_API_KEY) {
+          const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+          if (!LOVABLE_API_KEY && !GROQ_API_KEY && !(useOpenRouter && OPENROUTER_API_KEY)) {
             return streamText(fallbackAnswer(messages));
           }
 
