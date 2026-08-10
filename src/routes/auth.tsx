@@ -144,6 +144,14 @@ function AuthPage() {
           </button>
         </form>
 
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/" })}
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-lg border border-border bg-secondary text-sm font-semibold text-secondary-foreground transition hover:bg-accent"
+        >
+          Misafir olarak devam et
+        </button>
+
         <div className="mt-5 text-center text-sm text-muted-foreground">
           {mode === "signup" ? "Zaten hesabın var mı? " : "Hesabın yok mu? "}
           <button

@@ -1367,13 +1367,8 @@ function Index() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const requireAuth = () => {
-    if (!user) {
-      navigate({ to: "/auth" });
-      return false;
-    }
-    return true;
-  };
+  // Misafir modu: giriş zorunlu değil, herkes mesaj yazabilir.
+  const requireAuth = () => true;
 
   const sendMessage = async (text: string) => {
     if (
@@ -1681,12 +1676,18 @@ function Index() {
             </button>
 
             {!user ? (
-              <button
-                onClick={() => navigate({ to: "/auth" })}
-                className="mt-3 h-10 w-full rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-              >
-                E-posta ile Giriş
-              </button>
+              <>
+                <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
+                  <p className="font-semibold text-foreground">Misafir</p>
+                  <p className="truncate text-muted-foreground">Hesapsız kullanıyorsun</p>
+                </div>
+                <button
+                  onClick={() => navigate({ to: "/auth" })}
+                  className="mt-2 h-9 w-full rounded-lg border border-border bg-secondary px-4 text-xs font-semibold text-secondary-foreground transition hover:bg-accent"
+                >
+                  İstersen giriş yap
+                </button>
+              </>
             ) : (
               <>
                 <div className="mt-3 rounded-lg border border-border bg-card/60 p-3 text-xs">
@@ -1805,12 +1806,10 @@ function Index() {
               <div className="grid h-full place-items-center">
                 <div className="w-full max-w-2xl text-left">
                   <h1 className="text-balance text-5xl font-extrabold leading-none tracking-normal text-brand sm:text-6xl lg:text-7xl">
-                    Merhaba {user ? displayName : "Kıvanç"}
+                    Merhaba {user ? displayName : "Misafir"}
                   </h1>
                   <p className="mt-4 text-pretty text-2xl font-medium leading-tight text-foreground sm:text-3xl">
-                    {user
-                      ? "Sınır tanımayan AI ile ne yapmak istersin?"
-                      : "Başlamak için bir e-posta ile kayıt ol."}
+                    Sınır tanımayan AI ile ne yapmak istersin?
                   </p>
                 </div>
               </div>
@@ -2340,9 +2339,7 @@ function Index() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  user
-                    ? "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')"
-                    : "Mesaj göndermek için giriş yap…"
+                  "Bir şey sor… (görsel için: 'görsel oluştur: dağ manzarası')"
                 }
                 className="h-9 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
               />
