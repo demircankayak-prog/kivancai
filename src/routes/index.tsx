@@ -772,6 +772,7 @@ function Index() {
     if (ttsAudioRef.current) {
       try {
         ttsAudioRef.current.pause();
+        ttsAudioRef.current.currentTime = 0;
         ttsAudioRef.current.src = "";
       } catch {
         /* ignore */
@@ -787,41 +788,7 @@ function Index() {
     liveRecognitionPausedRef.current = false;
   };
 
-  const speakWithBrowserVoice = async (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
-    const clean = text.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim();
-    if (!clean) return false;
-    return new Promise<boolean>((resolve) => {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(clean);
-        let started = false;
-        const pickVoice = () => {
-          if (started) return;
-          started = true;
-          window.speechSynthesis.onvoiceschanged = null;
-          const voices = window.speechSynthesis.getVoices();
-          const trVoice = voices.find((v) => /tr|turkish|türk/i.test(`${v.lang} ${v.name}`));
-          const naturalVoice = voices.find((v) => /google|microsoft|zira|natural|online/i.test(v.name));
-          utter.voice = trVoice || naturalVoice || voices[0] || null;
-          utter.lang = utter.voice?.lang || "tr-TR";
-          utter.rate = 0.98;
-          utter.pitch = 1.02;
-          utter.volume = 1;
-          utter.onend = () => resolve(true);
-          utter.onerror = () => resolve(false);
-          window.speechSynthesis.speak(utter);
-        };
-        if (window.speechSynthesis.getVoices().length) pickVoice();
-        else {
-          window.speechSynthesis.onvoiceschanged = pickVoice;
-          window.setTimeout(pickVoice, 250);
-        }
-      } catch {
-        resolve(false);
-      }
-    });
-  };
+  // Tarayıcının robotik SpeechSynthesis motoru tamamen devre dışı.
 
   const startBrowserLiveRecognition = () => {
     const speechWindow = window as Window & {
