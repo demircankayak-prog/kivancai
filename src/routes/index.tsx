@@ -653,11 +653,25 @@ function Index() {
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
         .replace(/^new\s+/i, "")
         .trim();
-      // Tamamen ücretsiz, limitsiz: Pollinations linki
-      const seed = Math.floor(Math.random() * 1_000_000);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-        cleanPrompt,
-      )}?width=1024&height=1024&nologo=true&seed=${seed}`;
+      // FLUX modeli (ücretsiz, limitsiz) — istem otomatik İngilizceye çevrilir
+      let imageUrl = "";
+      try {
+        const resp = await fetch("/api/image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: cleanPrompt }),
+        });
+        const data = await resp.json();
+        if (resp.ok && data?.image) imageUrl = data.image as string;
+      } catch {
+        /* ignore */
+      }
+      if (!imageUrl) {
+        const seed = Math.floor(Math.random() * 1_000_000);
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+          `${cleanPrompt}, ultra detailed, high quality, 8k`,
+        )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
+      }
       setMessages((p) => {
         const arr = [...p];
         arr[arr.length - 1] = {
