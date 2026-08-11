@@ -1899,6 +1899,25 @@ function Index() {
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
+                      {m.role === "assistant" && !!m.content?.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (speakingIndex === i) {
+                              stopTts();
+                              setSpeakingIndex(null);
+                              return;
+                            }
+                            setSpeakingIndex(i);
+                            void speakReply(m.content).finally(() => setSpeakingIndex(null));
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          aria-label="Sesli dinle"
+                        >
+                          {speakingIndex === i ? <Square size={12} /> : <Volume2 size={12} />}
+                          {speakingIndex === i ? "Durdur" : "Dinle"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
