@@ -131,7 +131,7 @@ export const Route = createFileRoute("/api/tts")({
           // 2) Tamamen ücretsiz, anahtarsız internet TTS
           const free = await freeInternetTts(cleanText);
           if (free) {
-            return new Response(free, {
+            return new Response(free.buffer as ArrayBuffer, {
               headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
             });
           }
