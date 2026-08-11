@@ -7,13 +7,27 @@ const QUALITY_SUFFIX =
   "ultra detailed, high quality, 8k, sharp focus, realistic lighting, professional photography";
 
 const translateToEnglish = async (prompt: string): Promise<string> => {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return prompt;
   try {
-    const url = `https://text.pollinations.ai/${encodeURIComponent(
-      `Translate this image prompt to concise English. Reply with ONLY the translated prompt, no quotes, no explanation: ${prompt}`,
-    )}?model=openai`;
-    const r = await fetch(url);
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You translate image prompts into concise, vivid English. Reply with ONLY the translated prompt, no quotes, no explanation.",
+          },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
     if (!r.ok) return prompt;
-    const text = (await r.text()).trim().replace(/^["'`]+|["'`]+$/g, "");
+    const data = (await r.json()) as { choices?: { message?: { content?: string } }[] };
+    const text = (data.choices?.[0]?.message?.content || "").trim().replace(/^["'`]+|["'`]+$/g, "");
     if (!text || text.length > 600) return prompt;
     return text;
   } catch (err) {
