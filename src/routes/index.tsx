@@ -37,6 +37,8 @@ import {
   Copy,
   Check,
   AudioLines,
+  Volume2,
+  Square,
   MonitorUp,
   PhoneOff,
   Camera,
