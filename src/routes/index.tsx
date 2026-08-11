@@ -368,6 +368,7 @@ function Index() {
   const [recording, setRecording] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
