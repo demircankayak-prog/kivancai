@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 // 1) ElevenLabs "Charlie" (anahtar varsa)
 // 2) Pollinations openai-audio "onyx" (tamamen ücretsiz, anahtarsız)
 const ELEVEN_MALE_VOICE = "IKne3meq5aSn9XLyUdCD"; // Charlie - derin erkek
-const POLLINATIONS_MALE_VOICE = "onyx";
+const DEEP_MALE_VOICE = "onyx"; // derin, karizmatik erkek
 
 const cleanForSpeech = (text: string) =>
   text
@@ -14,21 +14,30 @@ const cleanForSpeech = (text: string) =>
     .trim()
     .slice(0, 1500);
 
-const pollinationsTts = async (text: string, voice: string): Promise<Response | null> => {
+const neuralTts = async (text: string, voice: string): Promise<Response | null> => {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
   try {
-    const url = `https://text.pollinations.ai/${encodeURIComponent(
-      `Aşağıdaki metni Türkçe, doğal ve akıcı bir şekilde seslendir: ${text}`,
-    )}?model=openai-audio&voice=${encodeURIComponent(voice)}`;
-    const r = await fetch(url);
-    const ct = r.headers.get("content-type") || "";
-    if (r.ok && r.body && ct.includes("audio")) {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai/gpt-4o-mini-tts",
+        input: text,
+        voice,
+        response_format: "mp3",
+        instructions:
+          "Türkçe konuş. Derin, karizmatik, sakin ve kendinden emin bir erkek sesi; doğal tonlama, akıcı ritim.",
+      }),
+    });
+    if (r.ok && r.body) {
       return new Response(r.body, {
         headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
       });
     }
-    console.error("pollinations tts failed:", r.status, ct);
+    console.error("neural tts failed:", r.status);
   } catch (err) {
-    console.error("pollinations tts error:", err);
+    console.error("neural tts error:", err);
   }
   return null;
 };
@@ -47,7 +56,11 @@ export const Route = createFileRoute("/api/tts")({
             return new Response(JSON.stringify({ error: "text gerekli" }), { status: 400 });
           }
 
-          // 1) ElevenLabs (anahtar varsa) — derin erkek ses
+          // 1) Derin, gerçekçi erkek ses (birincil)
+          const primary = await neuralTts(cleanText, DEEP_MALE_VOICE);
+          if (primary) return primary;
+
+          // 2) ElevenLabs (geçerli anahtar varsa)
           const apiKey = process.env.ELEVENLABS_API_KEY;
           if (apiKey) {
             const vid =
@@ -82,10 +95,6 @@ export const Route = createFileRoute("/api/tts")({
               console.error("elevenlabs tts error:", err);
             }
           }
-
-          // 2) Ücretsiz, anahtarsız yüksek kaliteli erkek ses
-          const free = await pollinationsTts(cleanText, POLLINATIONS_MALE_VOICE);
-          if (free) return free;
 
           return new Response(JSON.stringify({ error: "TTS kullanılamıyor" }), { status: 502 });
         } catch (e) {
