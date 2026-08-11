@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// ElevenLabs Multilingual v2 — canlı sohbet için daha doğal, yumuşak ve net TTS
-// Varsayılan ses: Sarah (EXAVITQu4vr4xnSDxMaL) — ChatGPT/Gemini tarzına yakın, temiz konuşma.
-const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
+// Tamamen ücretsiz, anahtarsız TTS: Pollinations (openai-audio) — gerçek insan sesi.
+// Türkçe için "nova" / "shimmer" doğal sonuç veriyor.
+const DEFAULT_POLLINATIONS_VOICE = "nova";
+const ELEVEN_DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
 
 export const Route = createFileRoute("/api/tts")({
   server: {
@@ -20,13 +21,40 @@ export const Route = createFileRoute("/api/tts")({
             });
           }
 
-          const vid = (typeof voiceId === "string" && voiceId.trim()) || DEFAULT_VOICE;
           const cleanText = text
             .replace(/[*_`#>~]+/g, "")
             .replace(/\s+/g, " ")
             .trim()
-            .slice(0, 2500);
+            .slice(0, 1200);
 
+          // 1) Ücretsiz internet TTS (anahtar/kredi gerekmez)
+          const pollVoice =
+            (typeof voiceId === "string" && /^[a-z]+$/.test(voiceId.trim()) && voiceId.trim()) ||
+            DEFAULT_POLLINATIONS_VOICE;
+          try {
+            const pollUrl = `https://text.pollinations.ai/${encodeURIComponent(
+              `Bu metni doğal ve akıcı bir Türkçe ile seslendir: ${cleanText}`,
+            )}?model=openai-audio&voice=${pollVoice}`;
+            const pollResp = await fetch(pollUrl);
+            const ct = pollResp.headers.get("content-type") || "";
+            if (pollResp.ok && pollResp.body && ct.includes("audio")) {
+              return new Response(pollResp.body, {
+                headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
+              });
+            }
+            console.error("pollinations tts fallback:", pollResp.status, ct);
+          } catch (err) {
+            console.error("pollinations tts error:", err);
+          }
+
+          // 2) Yedek: ElevenLabs (anahtar varsa)
+          const apiKey = process.env.ELEVENLABS_API_KEY;
+          if (!apiKey) {
+            return new Response(JSON.stringify({ error: "TTS kullanılamıyor" }), { status: 502 });
+          }
+          const vid =
+            (typeof voiceId === "string" && voiceId.trim().length > 15 && voiceId.trim()) ||
+            ELEVEN_DEFAULT_VOICE;
           const resp = await fetch(
             `https://api.elevenlabs.io/v1/text-to-speech/${vid}/stream?output_format=mp3_44100_128`,
             {
