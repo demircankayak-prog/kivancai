@@ -37,6 +37,8 @@ import {
   Copy,
   Check,
   AudioLines,
+  Volume2,
+  Square,
   MonitorUp,
   PhoneOff,
   Camera,
@@ -366,6 +368,7 @@ function Index() {
   const [recording, setRecording] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
@@ -645,33 +648,22 @@ function Index() {
       },
     ]);
     try {
+      void inputImage;
       const cleanPrompt = prompt
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
-        .replace(/^new\s+/i, "");
-      const resp = await fetch("/api/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: cleanPrompt, inputImage }),
-      });
-      const data = await resp.json();
-      if (!resp.ok || !data.image) {
-        setMessages((p) => {
-          const arr = [...p];
-          arr[arr.length - 1] = {
-            role: "assistant",
-            content: `⚠️ ${data.error || "Görsel oluşturulamadı"}`,
-          };
-          return arr;
-        });
-        return;
-      }
-      const watermarked = await addWatermark(data.image);
+        .replace(/^new\s+/i, "")
+        .trim();
+      // Tamamen ücretsiz, limitsiz: Pollinations linki
+      const seed = Math.floor(Math.random() * 1_000_000);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+        cleanPrompt,
+      )}?width=1024&height=1024&nologo=true&seed=${seed}`;
       setMessages((p) => {
         const arr = [...p];
         arr[arr.length - 1] = {
           role: "assistant",
           content: "İşte istediğin görsel kanka 🎨",
-          generatedImage: watermarked,
+          generatedImage: imageUrl,
         };
         return arr;
       });
@@ -1908,6 +1900,25 @@ function Index() {
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
+                      {m.role === "assistant" && !!m.content?.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (speakingIndex === i) {
+                              stopTts();
+                              setSpeakingIndex(null);
+                              return;
+                            }
+                            setSpeakingIndex(i);
+                            void speakReply(m.content).finally(() => setSpeakingIndex(null));
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          aria-label="Sesli dinle"
+                        >
+                          {speakingIndex === i ? <Square size={12} /> : <Volume2 size={12} />}
+                          {speakingIndex === i ? "Durdur" : "Dinle"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
