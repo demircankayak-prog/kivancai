@@ -14,59 +14,15 @@ export const Route = createFileRoute("/api/image")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { prompt, inputImage } = await request.json();
-          const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-          if (!LOVABLE_API_KEY) {
-            return fallbackImageResponse(prompt || "");
-          }
+          const { prompt } = await request.json();
           if (!prompt || typeof prompt !== "string") {
             return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
           }
-
-          const userContent: any = inputImage
-            ? [
-                { type: "text", text: prompt },
-                { type: "image_url", image_url: { url: inputImage } },
-              ]
-            : prompt;
-
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-3.1-flash-image-preview",
-              messages: [{ role: "user", content: userContent }],
-              modalities: ["image", "text"],
-            }),
-          });
-
-          if (!resp.ok) {
-            if (resp.status === 429) {
-              return fallbackImageResponse(prompt);
-            }
-            if (resp.status === 402) {
-              return fallbackImageResponse(prompt);
-            }
-            const t = await resp.text();
-            console.error("Image gen error:", resp.status, t);
-            return fallbackImageResponse(prompt);
-          }
-
-          const data = await resp.json();
-          const msg = data.choices?.[0]?.message;
-          const imageUrl =
-            msg?.images?.[0]?.image_url?.url ||
-            msg?.images?.[0]?.url ||
-            (Array.isArray(msg?.content)
-              ? msg.content.find((c: any) => c?.image_url?.url)?.image_url?.url
-              : undefined);
-          if (!imageUrl) {
-            console.error("Image gen empty response:", JSON.stringify(data).slice(0, 500));
-            return fallbackImageResponse(prompt);
-          }
+          // Tamamen ücretsiz, anahtarsız görsel: Pollinations
+          const seed = Math.floor(Math.random() * 1_000_000);
+          const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+            prompt.trim(),
+          )}?width=1024&height=1024&nologo=true&seed=${seed}`;
           return Response.json({ image: imageUrl });
         } catch (e) {
           console.error("image route error:", e);
