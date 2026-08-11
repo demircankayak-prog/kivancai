@@ -14,13 +14,6 @@ export const Route = createFileRoute("/api/tts")({
           if (!text || typeof text !== "string") {
             return new Response(JSON.stringify({ error: "text gerekli" }), { status: 400 });
           }
-          const apiKey = process.env.ELEVENLABS_API_KEY;
-          if (!apiKey) {
-            return new Response(JSON.stringify({ error: "ELEVENLABS_API_KEY yok" }), {
-              status: 500,
-            });
-          }
-
           const cleanText = text
             .replace(/[*_`#>~]+/g, "")
             .replace(/\s+/g, " ")
