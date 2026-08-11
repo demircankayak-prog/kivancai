@@ -653,11 +653,25 @@ function Index() {
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
         .replace(/^new\s+/i, "")
         .trim();
-      // Tamamen ücretsiz, limitsiz: Pollinations linki
-      const seed = Math.floor(Math.random() * 1_000_000);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-        cleanPrompt,
-      )}?width=1024&height=1024&nologo=true&seed=${seed}`;
+      // FLUX modeli (ücretsiz, limitsiz) — istem otomatik İngilizceye çevrilir
+      let imageUrl = "";
+      try {
+        const resp = await fetch("/api/image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: cleanPrompt }),
+        });
+        const data = await resp.json();
+        if (resp.ok && data?.image) imageUrl = data.image as string;
+      } catch {
+        /* ignore */
+      }
+      if (!imageUrl) {
+        const seed = Math.floor(Math.random() * 1_000_000);
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+          `${cleanPrompt}, ultra detailed, high quality, 8k`,
+        )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
+      }
       setMessages((p) => {
         const arr = [...p];
         arr[arr.length - 1] = {
@@ -758,6 +772,7 @@ function Index() {
     if (ttsAudioRef.current) {
       try {
         ttsAudioRef.current.pause();
+        ttsAudioRef.current.currentTime = 0;
         ttsAudioRef.current.src = "";
       } catch {
         /* ignore */
@@ -773,41 +788,7 @@ function Index() {
     liveRecognitionPausedRef.current = false;
   };
 
-  const speakWithBrowserVoice = async (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
-    const clean = text.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim();
-    if (!clean) return false;
-    return new Promise<boolean>((resolve) => {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(clean);
-        let started = false;
-        const pickVoice = () => {
-          if (started) return;
-          started = true;
-          window.speechSynthesis.onvoiceschanged = null;
-          const voices = window.speechSynthesis.getVoices();
-          const trVoice = voices.find((v) => /tr|turkish|türk/i.test(`${v.lang} ${v.name}`));
-          const naturalVoice = voices.find((v) => /google|microsoft|zira|natural|online/i.test(v.name));
-          utter.voice = trVoice || naturalVoice || voices[0] || null;
-          utter.lang = utter.voice?.lang || "tr-TR";
-          utter.rate = 0.98;
-          utter.pitch = 1.02;
-          utter.volume = 1;
-          utter.onend = () => resolve(true);
-          utter.onerror = () => resolve(false);
-          window.speechSynthesis.speak(utter);
-        };
-        if (window.speechSynthesis.getVoices().length) pickVoice();
-        else {
-          window.speechSynthesis.onvoiceschanged = pickVoice;
-          window.setTimeout(pickVoice, 250);
-        }
-      } catch {
-        resolve(false);
-      }
-    });
-  };
+  // Tarayıcının robotik SpeechSynthesis motoru tamamen devre dışı.
 
   const startBrowserLiveRecognition = () => {
     const speechWindow = window as Window & {
@@ -879,8 +860,6 @@ function Index() {
       });
       if (!resp.ok) {
         console.error("TTS http error", resp.status);
-        setVoiceSpeaking(true);
-        await speakWithBrowserVoice(clean);
         setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
@@ -900,16 +879,12 @@ function Index() {
       audio.onerror = async () => {
         setVoiceSpeaking(false);
         URL.revokeObjectURL(url);
-        setVoiceSpeaking(true);
-        await speakWithBrowserVoice(clean);
-        setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
       };
       const played = await audio.play().then(() => true).catch(() => false);
       if (!played) {
         URL.revokeObjectURL(url);
-        await speakWithBrowserVoice(clean);
         setVoiceSpeaking(false);
         liveRecognitionPausedRef.current = false;
         if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
@@ -924,9 +899,6 @@ function Index() {
       }
       setVoiceSpeaking(false);
       liveRecognitionPausedRef.current = false;
-      setVoiceSpeaking(true);
-      await speakWithBrowserVoice(clean);
-      setVoiceSpeaking(false);
       if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
     }
   };

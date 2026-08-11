@@ -1,13 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const fallbackImage = (prompt: string) => {
-  void prompt;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#123a55"/><stop offset=".62" stop-color="#2a6270"/><stop offset="1" stop-color="#1f4c33"/></linearGradient><linearGradient id="field" x1="0" x2="1"><stop stop-color="#204f37"/><stop offset="1" stop-color="#34704a"/></linearGradient></defs><rect width="1024" height="1024" fill="url(#sky)"/><circle cx="760" cy="210" r="82" fill="#f4d27a" opacity=".92"/><path d="M0 650 C170 565 330 690 505 610 C690 525 810 650 1024 570 L1024 1024 L0 1024 Z" fill="url(#field)"/><path d="M156 814 C290 732 410 828 558 760 C690 700 826 740 1024 680 L1024 1024 L0 1024 L0 890 C52 876 104 846 156 814 Z" fill="#183f2e" opacity=".9"/></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-};
+// Görsel motoru: FLUX (ücretsiz, anahtarsız, limitsiz internet altyapısı).
+// Türkçe istem otomatik olarak İngilizceye çevrilir ve kalite etiketleri eklenir.
 
-const fallbackImageResponse = (prompt: string) =>
-  Response.json({ image: fallbackImage(prompt), fallback: true });
+const QUALITY_SUFFIX =
+  "ultra detailed, high quality, 8k, sharp focus, realistic lighting, professional photography";
+
+const translateToEnglish = async (prompt: string): Promise<string> => {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return prompt;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You translate image prompts into concise, vivid English. Reply with ONLY the translated prompt, no quotes, no explanation.",
+          },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!r.ok) return prompt;
+    const data = (await r.json()) as { choices?: { message?: { content?: string } }[] };
+    const text = (data.choices?.[0]?.message?.content || "").trim().replace(/^["'`]+|["'`]+$/g, "");
+    if (!text || text.length > 600) return prompt;
+    return text;
+  } catch (err) {
+    console.error("translate error:", err);
+    return prompt;
+  }
+};
 
 export const Route = createFileRoute("/api/image")({
   server: {
@@ -18,15 +45,16 @@ export const Route = createFileRoute("/api/image")({
           if (!prompt || typeof prompt !== "string") {
             return new Response(JSON.stringify({ error: "Prompt gerekli" }), { status: 400 });
           }
-          // Tamamen ücretsiz, anahtarsız görsel: Pollinations
+          const english = await translateToEnglish(prompt.trim());
+          const finalPrompt = `${english}, ${QUALITY_SUFFIX}`;
           const seed = Math.floor(Math.random() * 1_000_000);
           const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-            prompt.trim(),
-          )}?width=1024&height=1024&nologo=true&seed=${seed}`;
-          return Response.json({ image: imageUrl });
+            finalPrompt,
+          )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
+          return Response.json({ image: imageUrl, prompt: finalPrompt });
         } catch (e) {
           console.error("image route error:", e);
-          return fallbackImageResponse("KıvançAI");
+          return new Response(JSON.stringify({ error: "Görsel oluşturulamadı" }), { status: 500 });
         }
       },
     },
