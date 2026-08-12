@@ -86,6 +86,42 @@ const streamText = (content: string) =>
     { headers: { "Content-Type": "text/event-stream" } },
   );
 
+// İstemci bağlantıyı kestiğinde (dinlemeyi/yanıtı durdurma) yukarı akıştan
+// gelen AbortError sunucuyu patlatmasın diye güvenli aktarım.
+const safeStream = (body: ReadableStream<Uint8Array>) =>
+  new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+        controller.close();
+      } catch {
+        try {
+          controller.close();
+        } catch {
+          /* zaten kapalı */
+        }
+      } finally {
+        try {
+          reader.releaseLock();
+        } catch {
+          /* yoksay */
+        }
+      }
+    },
+    cancel() {
+      try {
+        void body.cancel();
+      } catch {
+        /* yoksay */
+      }
+    },
+  });
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
