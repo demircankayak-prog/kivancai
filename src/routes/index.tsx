@@ -464,6 +464,7 @@ function Index() {
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [researchTopic, setResearchTopic] = useState<string | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
