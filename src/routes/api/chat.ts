@@ -242,12 +242,12 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
                   }),
                 });
                 if (groqRes.ok) {
-                  return new Response(groqRes.body, { headers: { "Content-Type": "text/event-stream" } });
+                  return new Response(safeStream(groqRes.body!), { headers: { "Content-Type": "text/event-stream" } });
                 }
               }
               return streamText(fallbackAnswer(messages));
             }
-            return new Response(response.body, { headers: { "Content-Type": "text/event-stream" } });
+            return new Response(safeStream(response.body!), { headers: { "Content-Type": "text/event-stream" } });
           } else if (GROQ_API_KEY) {
             // Model boyutuna göre Groq modeli seç
             const isHeavy =
@@ -302,7 +302,7 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
             return streamText(fallbackAnswer(messages));
           }
 
-          return new Response(response.body, {
+          return new Response(safeStream(response.body!), {
             headers: { "Content-Type": "text/event-stream" },
           });
         } catch (e) {

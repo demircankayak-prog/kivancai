@@ -31,7 +31,7 @@ const neuralTts = async (text: string, voice: string): Promise<Response | null> 
       }),
     });
     if (r.ok && r.body) {
-      return new Response(r.body, {
+      return new Response(safeStream(r.body), {
         headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
       });
     }
@@ -86,7 +86,7 @@ export const Route = createFileRoute("/api/tts")({
                 },
               );
               if (resp.ok && resp.body) {
-                return new Response(resp.body, {
+                return new Response(safeStream(resp.body), {
                   headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
                 });
               }
