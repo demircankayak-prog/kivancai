@@ -284,9 +284,6 @@ const promptActions = [
   },
 ];
 
-const SETTINGS_ITEMS = [
-  { label: "Etkinlik", icon: Bell, detail: "Sohbet ve kullanım geçmişi" },
-];
 
 // ===== Kredisiz yardımcılar (tamamen client-side) =====
 
@@ -382,7 +379,7 @@ function ResearchBox({ topic }: { topic: string }) {
   );
 }
 
-const _UNUSED_SETTINGS_ITEMS = [
+const SETTINGS_ITEMS = [
   { label: "Etkinlik", icon: Bell, detail: "Sohbet ve kullanım geçmişi" },
   { label: "Tema", icon: Brush, detail: "Koyu minimal arayüz" },
   { label: "KıvançAI için talimatlar", icon: Bot, detail: "Asistan davranışı" },
