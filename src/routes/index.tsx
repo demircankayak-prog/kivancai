@@ -1707,19 +1707,31 @@ function Index() {
     if (c) setMessages(c.messages);
   };
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     const speechWindow = window as Window & {
       SpeechRecognition?: BrowserSpeechRecognitionConstructor;
       webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
     };
     const SR = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SR) {
-      alert("Tarayıcınız ses tanımayı desteklemiyor.");
+      alert("Tarayıcın ses tanımayı desteklemiyor. Chrome veya Edge dene kanka.");
       return;
     }
     if (recording) {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
       setRecording(false);
+      return;
+    }
+    // Mikrofon iznini önce iste (izin yoksa buton sessizce çalışmıyordu)
+    try {
+      const s = await navigator.mediaDevices?.getUserMedia({ audio: true });
+      s?.getTracks().forEach((t) => t.stop());
+    } catch {
+      alert("Mikrofon izni gerekli. Adres çubuğundaki 🔒 → Mikrofon → İzin Ver.");
       return;
     }
     const rec = new SR();
@@ -1732,8 +1744,12 @@ function Index() {
     rec.onend = () => setRecording(false);
     rec.onerror = () => setRecording(false);
     recognitionRef.current = rec;
-    rec.start();
-    setRecording(true);
+    try {
+      rec.start();
+      setRecording(true);
+    } catch {
+      setRecording(false);
+    }
   };
 
   const initials = (profile?.display_name || user?.email || "U").slice(0, 1).toUpperCase();
