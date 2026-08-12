@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { safeStream } from "@/lib/safe-stream";
+import { safeStream, ignoreAbortErrors } from "@/lib/safe-stream";
 
 // Derin, karizmatik ERKEK ses. Tarayıcı robot sesi ve Google Translate TTS
 // tamamen kaldırıldı.
@@ -42,6 +42,8 @@ const neuralTts = async (text: string, voice: string): Promise<Response | null> 
   }
   return null;
 };
+
+ignoreAbortErrors();
 
 export const Route = createFileRoute("/api/tts")({
   server: {
