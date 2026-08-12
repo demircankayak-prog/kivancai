@@ -1582,6 +1582,35 @@ function Index() {
       }
 
       const token = (await supabase.auth.getSession()).data.session?.access_token;
+
+      // Canlı internet (duck.ai tüneli): en güncel 2026 bilgisi + gerçek linkler
+      const researching = isResearchQuestion(text);
+      let liveSources: SearchSource[] = [];
+      if (researching) {
+        setResearchTopic(text);
+        setResearchSources([]);
+        try {
+          const sres = await fetch("/api/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ q: text }),
+          });
+          const sdata = (await sres.json()) as { sources?: SearchSource[]; context?: string };
+          liveSources = sdata.sources || [];
+          setResearchSources(liveSources);
+          if (sdata.context) {
+            apiMessages.splice(apiMessages.length - 1, 0, {
+              role: "user",
+              content:
+                `GÜNCEL İNTERNET SONUÇLARI (bugünün tarihi: ${new Date().toLocaleDateString("tr-TR")}). ` +
+                `Bu kaynakları kullanarak en güncel ve doğru bilgiyi ver, uydurma:\n\n${sdata.context}`,
+            } as (typeof apiMessages)[number]);
+          }
+        } catch {
+          /* arama başarısızsa normal cevap ver */
+        }
+      }
+
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -1597,16 +1626,15 @@ function Index() {
         setStreaming(false);
         return;
       }
-
-      const researching = isResearchQuestion(text);
-      const researchUntil = researching ? Date.now() + 15000 : 0;
-      if (researching) setResearchTopic(text);
-
+      setResearchTopic(null);
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantText = "";
-      if (!researching) setMessages((p) => [...p, { role: "assistant", content: "" }]);
+      setMessages((p) => [
+        ...p,
+        { role: "assistant", content: "", sources: liveSources.length ? liveSources : undefined },
+      ]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1625,27 +1653,15 @@ function Index() {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               assistantText += delta;
-              if (!researching) {
-                setMessages((p) =>
-                  p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
-                );
-              }
+              setMessages((p) =>
+                p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
+              );
             }
           } catch {
             buffer = line + "\n" + buffer;
             break;
           }
         }
-      }
-
-      if (researching) {
-        const wait = researchUntil - Date.now();
-        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-        setResearchTopic(null);
-        setMessages((p) => [
-          ...p,
-          { role: "assistant", content: assistantText || "…" },
-        ]);
       }
     } catch (e) {
       setResearchTopic(null);
