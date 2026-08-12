@@ -148,3 +148,12 @@
     color: var(--color-foreground);
   }
 }
+
+@keyframes kv-sway {
+  0% { transform: translateX(-10px) rotate(-4deg); }
+  50% { transform: translateX(10px) rotate(4deg); }
+  100% { transform: translateX(-10px) rotate(-4deg); }
+}
+.kv-sway {
+  animation: kv-sway 2.2s ease-in-out infinite;
+}

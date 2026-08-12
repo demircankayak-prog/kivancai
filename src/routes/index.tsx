@@ -871,6 +871,36 @@ function Index() {
     liveRecognitionPausedRef.current = false;
   };
 
+  // Anında (buffersiz) Grok Rex / Charlie erkek sesi.
+  const playInstantVoice = (text: string, onDone?: () => void) => {
+    const clean = text
+      .replace(/[*_`#>~]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) {
+      onDone?.();
+      return;
+    }
+    stopTts();
+    const audio = new Audio(pollinationsTtsUrl(clean));
+    audio.preload = "auto";
+    ttsAudioRef.current = audio;
+    setVoiceSpeaking(true);
+    const finish = () => {
+      setVoiceSpeaking(false);
+      onDone?.();
+    };
+    audio.onended = finish;
+    audio.onerror = () => {
+      // yedek: kendi ses servisimiz
+      void speakReply(clean).finally(finish);
+    };
+    audio.play().catch((err) => {
+      console.log(err);
+      void speakReply(clean).finally(finish);
+    });
+  };
+
   // Tarayıcının robotik SpeechSynthesis motoru tamamen devre dışı.
 
   const startBrowserLiveRecognition = () => {
@@ -1544,11 +1574,15 @@ function Index() {
         return;
       }
 
+      const researching = isResearchQuestion(text);
+      const researchUntil = researching ? Date.now() + 15000 : 0;
+      if (researching) setResearchTopic(text);
+
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantText = "";
-      setMessages((p) => [...p, { role: "assistant", content: "" }]);
+      if (!researching) setMessages((p) => [...p, { role: "assistant", content: "" }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1567,9 +1601,11 @@ function Index() {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               assistantText += delta;
-              setMessages((p) =>
-                p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
-              );
+              if (!researching) {
+                setMessages((p) =>
+                  p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
+                );
+              }
             }
           } catch {
             buffer = line + "\n" + buffer;
@@ -1577,9 +1613,21 @@ function Index() {
           }
         }
       }
+
+      if (researching) {
+        const wait = researchUntil - Date.now();
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        setResearchTopic(null);
+        setMessages((p) => [
+          ...p,
+          { role: "assistant", content: assistantText || "…" },
+        ]);
+      }
     } catch (e) {
+      setResearchTopic(null);
       setMessages((p) => [...p, { role: "assistant", content: "⚠️ Bağlantı hatası" }]);
     } finally {
+      setResearchTopic(null);
       setStreaming(false);
     }
   };
@@ -1965,7 +2013,7 @@ function Index() {
                               return;
                             }
                             setSpeakingIndex(i);
-                            void speakReply(m.content).finally(() => setSpeakingIndex(null));
+                            playInstantVoice(m.content, () => setSpeakingIndex(null));
                           }}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Sesli dinle"
@@ -1977,6 +2025,7 @@ function Index() {
                     </div>
                   </div>
                 ))}
+                {researchTopic && <ResearchBox topic={researchTopic} />}
                 {generatingImage && (
                   <div className="flex gap-3 justify-start">
                     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
