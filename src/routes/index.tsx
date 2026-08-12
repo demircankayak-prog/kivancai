@@ -284,6 +284,101 @@ const promptActions = [
   },
 ];
 
+
+// ===== Kredisiz yardımcılar (tamamen client-side) =====
+
+// Türkçe istemi ücretsiz MyMemory servisiyle İngilizceye çevir (anahtarsız).
+async function translateToEnglish(text: string): Promise<string> {
+  const clean = text.trim();
+  if (!clean) return clean;
+  if (!/[çğıöşüÇĞİÖŞÜ]/.test(clean) && /^[\x00-\x7F\s]*$/.test(clean)) return clean;
+  try {
+    const r = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 400))}&langpair=tr|en`,
+    );
+    if (!r.ok) return clean;
+    const d = (await r.json()) as { responseData?: { translatedText?: string } };
+    const t = (d.responseData?.translatedText || "").trim();
+    return t && t.length < 600 ? t : clean;
+  } catch {
+    return clean;
+  }
+}
+
+// Anında akan Grok Rex (Charlie) erkek sesi — buffer yok, anahtar yok.
+const pollinationsTtsUrl = (text: string) =>
+  `https://text.pollinations.ai/${encodeURIComponent(
+    `Şunu doğal bir şekilde oku: ${text.slice(0, 900)}`,
+  )}?model=openai-audio&voice=charlie`;
+
+// Araştırma gerektiren soru mu? (selam gibi kısa mesajlarda beklemesin)
+const isResearchQuestion = (text: string) => {
+  const t = text.trim().toLowerCase();
+  if (t.length < 12) return false;
+  const greetings = ["selam", "sa", "merhaba", "naber", "günaydın", "iyi geceler", "hi", "hello"];
+  if (greetings.some((g) => t === g || t.startsWith(g + " ") || t.startsWith(g + ","))) return false;
+  const words = t.split(/\s+/).filter(Boolean).length;
+  if (words < 3) return false;
+  return (
+    /\?|kim|nedir|nasıl|neden|ne zaman|nerede|kaç|araştır|hakkında|bilgi|karşılaştır|tarih|anlat/.test(
+      t,
+    ) || words >= 6
+  );
+};
+
+function ResearchBox({ topic }: { topic: string }) {
+  const q = encodeURIComponent(topic.slice(0, 120));
+  const links = [
+    {
+      name: "YouTube",
+      href: `https://www.youtube.com/results?search_query=${q}`,
+      color: "#FF0000",
+      path: "M23 12s0-3.9-.5-5.8a3 3 0 0 0-2.1-2.1C18.5 3.5 12 3.5 12 3.5s-6.5 0-8.4.6A3 3 0 0 0 1.5 6.2 62 62 0 0 0 1 12c0 3.9.5 5.8.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 8.4.6 8.4.6s6.5 0 8.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8ZM9.8 15.5v-7l6.2 3.5-6.2 3.5Z",
+    },
+    {
+      name: "Wikipedia",
+      href: `https://tr.wikipedia.org/w/index.php?search=${q}`,
+      color: "#e5e5e5",
+      path: "M2 4h5.2v1.1l-1.3.2 3.3 8.2 2.2-5.3-1.1-2.9-1.1-.2V4h4.9v1.1l-1.2.2 3.2 8.2 3-8.2-1.4-.2V4H22v1.1l-1.3.3-5 12.6h-1.2l-2.9-7-3 7h-1.2l-5-12.6L2 5.1V4Z",
+    },
+    {
+      name: "Pollo AI",
+      href: `https://pollinations.ai/`,
+      color: "#22c55e",
+      path: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 4a3 3 0 1 1-3 3 3 3 0 0 1 3-3Zm0 12a7 7 0 0 1-5.6-2.8c.1-1.9 3.7-2.9 5.6-2.9s5.5 1 5.6 2.9A7 7 0 0 1 12 18Z",
+    },
+  ];
+  return (
+    <div className="flex gap-3 justify-start">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-muted/40 p-4">
+        <p className="mb-3 text-xs font-semibold text-muted-foreground">
+          🔎 Aranıyor: <span className="text-foreground">{topic.slice(0, 60)}</span>
+        </p>
+        <div className="flex items-center gap-5">
+          {links.map((l, idx) => (
+            <a
+              key={l.name}
+              href={l.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`${l.name}'da aç`}
+              className="kv-sway grid h-11 w-11 place-items-center rounded-xl bg-background/70 transition hover:scale-110"
+              style={{ animationDelay: `${idx * 0.25}s` }}
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" fill={l.color} aria-label={l.name}>
+                <path d={l.path} />
+              </svg>
+            </a>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Kaynaklar taranıyor... simgelere tıklayarak siteyi açabilirsin.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const SETTINGS_ITEMS = [
   { label: "Etkinlik", icon: Bell, detail: "Sohbet ve kullanım geçmişi" },
   { label: "Tema", icon: Brush, detail: "Koyu minimal arayüz" },
@@ -369,6 +464,7 @@ function Index() {
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [researchTopic, setResearchTopic] = useState<string | null>(null);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
@@ -653,25 +749,12 @@ function Index() {
         .replace(/^\/(görsel|gorsel|image)\s*/i, "")
         .replace(/^new\s+/i, "")
         .trim();
-      // FLUX modeli (ücretsiz, limitsiz) — istem otomatik İngilizceye çevrilir
-      let imageUrl = "";
-      try {
-        const resp = await fetch("/api/image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: cleanPrompt }),
-        });
-        const data = await resp.json();
-        if (resp.ok && data?.image) imageUrl = data.image as string;
-      } catch {
-        /* ignore */
-      }
-      if (!imageUrl) {
-        const seed = Math.floor(Math.random() * 1_000_000);
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-          `${cleanPrompt}, ultra detailed, high quality, 8k`,
-        )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
-      }
+      // Tamamen client-side FLUX (kredisiz, anahtarsız, sınırsız).
+      const english = await translateToEnglish(cleanPrompt);
+      const seed = Math.floor(Math.random() * 1_000_000);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+        `${english}, ultra detailed, high quality, 8k, sharp focus, cinematic lighting`,
+      )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
       setMessages((p) => {
         const arr = [...p];
         arr[arr.length - 1] = {
@@ -786,6 +869,36 @@ function Index() {
     }
     setVoiceSpeaking(false);
     liveRecognitionPausedRef.current = false;
+  };
+
+  // Anında (buffersiz) Grok Rex / Charlie erkek sesi.
+  const playInstantVoice = (text: string, onDone?: () => void) => {
+    const clean = text
+      .replace(/[*_`#>~]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) {
+      onDone?.();
+      return;
+    }
+    stopTts();
+    const audio = new Audio(pollinationsTtsUrl(clean));
+    audio.preload = "auto";
+    ttsAudioRef.current = audio;
+    setVoiceSpeaking(true);
+    const finish = () => {
+      setVoiceSpeaking(false);
+      onDone?.();
+    };
+    audio.onended = finish;
+    audio.onerror = () => {
+      // yedek: kendi ses servisimiz
+      void speakReply(clean).finally(finish);
+    };
+    audio.play().catch((err) => {
+      console.log(err);
+      void speakReply(clean).finally(finish);
+    });
   };
 
   // Tarayıcının robotik SpeechSynthesis motoru tamamen devre dışı.
@@ -1461,11 +1574,15 @@ function Index() {
         return;
       }
 
+      const researching = isResearchQuestion(text);
+      const researchUntil = researching ? Date.now() + 15000 : 0;
+      if (researching) setResearchTopic(text);
+
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantText = "";
-      setMessages((p) => [...p, { role: "assistant", content: "" }]);
+      if (!researching) setMessages((p) => [...p, { role: "assistant", content: "" }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1484,9 +1601,11 @@ function Index() {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               assistantText += delta;
-              setMessages((p) =>
-                p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
-              );
+              if (!researching) {
+                setMessages((p) =>
+                  p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantText } : m)),
+                );
+              }
             }
           } catch {
             buffer = line + "\n" + buffer;
@@ -1494,9 +1613,21 @@ function Index() {
           }
         }
       }
+
+      if (researching) {
+        const wait = researchUntil - Date.now();
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        setResearchTopic(null);
+        setMessages((p) => [
+          ...p,
+          { role: "assistant", content: assistantText || "…" },
+        ]);
+      }
     } catch (e) {
+      setResearchTopic(null);
       setMessages((p) => [...p, { role: "assistant", content: "⚠️ Bağlantı hatası" }]);
     } finally {
+      setResearchTopic(null);
       setStreaming(false);
     }
   };
@@ -1726,11 +1857,11 @@ function Index() {
 
             <div className="flex items-center gap-3">
               <a
-                href="/kivancai-desktop.zip"
+                href="/KivancAI.exe"
                 download
                 className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition hover:bg-accent"
                 aria-label="Masaüstü uygulamasını indir"
-                title="Masaüstü (.exe) paketini indir"
+                title="KivancAI.exe indir — tek tıkla açılır"
               >
                 <Download size={16} />
               </a>
@@ -1882,7 +2013,7 @@ function Index() {
                               return;
                             }
                             setSpeakingIndex(i);
-                            void speakReply(m.content).finally(() => setSpeakingIndex(null));
+                            playInstantVoice(m.content, () => setSpeakingIndex(null));
                           }}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Sesli dinle"
@@ -1894,6 +2025,7 @@ function Index() {
                     </div>
                   </div>
                 ))}
+                {researchTopic && <ResearchBox topic={researchTopic} />}
                 {generatingImage && (
                   <div className="flex gap-3 justify-start">
                     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
