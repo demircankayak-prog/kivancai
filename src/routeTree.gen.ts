@@ -15,6 +15,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCustomChatRouteImport } from './routes/api/custom-chat'
 import { Route as ApiImageRouteImport } from './routes/api/image'
 import { Route as ApiScreenHelpRouteImport } from './routes/api/screen-help'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiSttRouteImport } from './routes/api/stt'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as ApiVideoRouteImport } from './routes/api/video'
@@ -49,6 +50,11 @@ const ApiScreenHelpRoute = ApiScreenHelpRouteImport.update({
   path: '/api/screen-help',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSttRoute = ApiSttRouteImport.update({
   id: '/api/stt',
   path: '/api/stt',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/api/custom-chat': typeof ApiCustomChatRoute
   '/api/image': typeof ApiImageRoute
   '/api/screen-help': typeof ApiScreenHelpRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/api/video': typeof ApiVideoRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/api/custom-chat'
     | '/api/image'
     | '/api/screen-help'
+    | '/api/search'
     | '/api/stt'
     | '/api/tts'
     | '/api/video'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/api/custom-chat'
     | '/api/image'
     | '/api/screen-help'
+    | '/api/search'
     | '/api/stt'
     | '/api/tts'
     | '/api/video'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/api/custom-chat'
     | '/api/image'
     | '/api/screen-help'
+    | '/api/search'
     | '/api/stt'
     | '/api/tts'
     | '/api/video'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   ApiCustomChatRoute: typeof ApiCustomChatRoute
   ApiImageRoute: typeof ApiImageRoute
   ApiScreenHelpRoute: typeof ApiScreenHelpRoute
+  ApiSearchRoute: typeof ApiSearchRoute
   ApiSttRoute: typeof ApiSttRoute
   ApiTtsRoute: typeof ApiTtsRoute
   ApiVideoRoute: typeof ApiVideoRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScreenHelpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stt': {
       id: '/api/stt'
       path: '/api/stt'
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCustomChatRoute: ApiCustomChatRoute,
   ApiImageRoute: ApiImageRoute,
   ApiScreenHelpRoute: ApiScreenHelpRoute,
+  ApiSearchRoute: ApiSearchRoute,
   ApiSttRoute: ApiSttRoute,
   ApiTtsRoute: ApiTtsRoute,
   ApiVideoRoute: ApiVideoRoute,
