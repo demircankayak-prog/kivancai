@@ -71,6 +71,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Attachment = { kind: "image" | "video"; url: string; name?: string };
+type SearchSource = { title: string; url: string; site: string; snippet?: string };
 type ScreenCropPreview = {
   image: string;
   label: string;
@@ -84,6 +85,7 @@ type Msg = {
   generatedVideo?: string; // video url
   videoWatermark?: boolean; // ilk videoda false, sonrakilerde true
   screenCrop?: ScreenCropPreview;
+  sources?: SearchSource[];
 };
 type CustomAiProvider = "anthropic" | "poe";
 type BrowserSpeechRecognition = {
