@@ -1096,7 +1096,18 @@ function Index() {
         }
       }
       const reply = full.trim() || "Tamamdır kanka.";
-      await speakReply(reply);
+      setVoiceReply(reply);
+      // Anında Grok Rex sesi + bitince mikrofonu otomatik geri aç
+      liveRecognitionPausedRef.current = true;
+      try {
+        liveRecognitionRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      playInstantVoice(reply, () => {
+        liveRecognitionPausedRef.current = false;
+        if (voiceLiveOpenRef.current) startBrowserLiveRecognition();
+      });
     } catch (e) {
       console.error("live AI error:", e);
       const fb = "Bağlantıda küçük bir sorun oldu kanka, tekrar dener misin?";
