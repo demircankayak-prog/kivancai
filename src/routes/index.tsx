@@ -2043,6 +2043,9 @@ function Index() {
                       <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
                         <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
                       </div>
+                      {m.role === "assistant" && m.sources && m.sources.length > 0 && (
+                        <SourceChips sources={m.sources} />
+                      )}
                       {m.role === "assistant" && !!m.content?.trim() && (
                         <button
                           type="button"
