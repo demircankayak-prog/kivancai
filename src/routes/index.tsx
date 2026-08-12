@@ -488,6 +488,7 @@ function Index() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [researchTopic, setResearchTopic] = useState<string | null>(null);
+  const [researchSources, setResearchSources] = useState<SearchSource[]>([]);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
