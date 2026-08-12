@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { safeStream } from "@/lib/safe-stream";
+import { safeStream, ignoreAbortErrors } from "@/lib/safe-stream";
 import { checkPremiumByAuthHeader } from "@/server/premium.server";
 
 const PREMIUM_MODEL_IDS = new Set<string>([
@@ -87,6 +87,8 @@ const streamText = (content: string) =>
     { headers: { "Content-Type": "text/event-stream" } },
   );
 
+
+ignoreAbortErrors();
 
 export const Route = createFileRoute("/api/chat")({
   server: {
