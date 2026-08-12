@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { safeStream } from "@/lib/safe-stream";
 
 // Derin, karizmatik ERKEK ses. Tarayıcı robot sesi ve Google Translate TTS
 // tamamen kaldırıldı.
