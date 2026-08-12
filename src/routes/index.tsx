@@ -328,54 +328,75 @@ const isResearchQuestion = (text: string) => {
   );
 };
 
-function ResearchBox({ topic }: { topic: string }) {
-  const q = encodeURIComponent(topic.slice(0, 120));
-  const links = [
-    {
-      name: "YouTube",
-      href: `https://www.youtube.com/results?search_query=${q}`,
-      color: "#FF0000",
-      path: "M23 12s0-3.9-.5-5.8a3 3 0 0 0-2.1-2.1C18.5 3.5 12 3.5 12 3.5s-6.5 0-8.4.6A3 3 0 0 0 1.5 6.2 62 62 0 0 0 1 12c0 3.9.5 5.8.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 8.4.6 8.4.6s6.5 0 8.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8ZM9.8 15.5v-7l6.2 3.5-6.2 3.5Z",
-    },
-    {
-      name: "Wikipedia",
-      href: `https://tr.wikipedia.org/w/index.php?search=${q}`,
-      color: "#e5e5e5",
-      path: "M2 4h5.2v1.1l-1.3.2 3.3 8.2 2.2-5.3-1.1-2.9-1.1-.2V4h4.9v1.1l-1.2.2 3.2 8.2 3-8.2-1.4-.2V4H22v1.1l-1.3.3-5 12.6h-1.2l-2.9-7-3 7h-1.2l-5-12.6L2 5.1V4Z",
-    },
-    {
-      name: "Pollo AI",
-      href: `https://pollinations.ai/`,
-      color: "#22c55e",
-      path: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 4a3 3 0 1 1-3 3 3 3 0 0 1 3-3Zm0 12a7 7 0 0 1-5.6-2.8c.1-1.9 3.7-2.9 5.6-2.9s5.5 1 5.6 2.9A7 7 0 0 1 12 18Z",
-    },
-  ];
+const faviconOf = (site: string) =>
+  `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(site)}`;
+
+function SourceChips({ sources }: { sources: SearchSource[] }) {
+  if (!sources.length) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {sources.slice(0, 8).map((s, i) => (
+        <a
+          key={s.url + i}
+          href={s.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={s.title}
+          className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-brand/60 hover:text-foreground"
+        >
+          <img src={faviconOf(s.site)} alt="" className="h-3.5 w-3.5 rounded-sm" />
+          <span className="truncate">{s.title || s.site}</span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function ResearchBox({ topic, sources }: { topic: string; sources: SearchSource[] }) {
   return (
     <div className="flex gap-3 justify-start">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-muted/40 p-4">
-        <p className="mb-3 text-xs font-semibold text-muted-foreground">
-          🔎 Aranıyor: <span className="text-foreground">{topic.slice(0, 60)}</span>
-        </p>
-        <div className="flex items-center gap-5">
-          {links.map((l, idx) => (
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-muted/40">
+        <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand/70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
+          </span>
+          <p className="text-xs font-semibold text-muted-foreground">
+            İnternette aranıyor:{" "}
+            <span className="text-foreground">{topic.slice(0, 70)}</span>
+          </p>
+        </div>
+        <div className="max-h-64 space-y-1.5 overflow-y-auto px-3 py-3">
+          {sources.length === 0 && (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-9 animate-pulse rounded-lg bg-background/60"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          )}
+          {sources.map((s, i) => (
             <a
-              key={l.name}
-              href={l.href}
+              key={s.url + i}
+              href={s.url}
               target="_blank"
               rel="noopener noreferrer"
-              title={`${l.name}'da aç`}
-              className="kv-sway grid h-11 w-11 place-items-center rounded-xl bg-background/70 transition hover:scale-110"
-              style={{ animationDelay: `${idx * 0.25}s` }}
+              className="kv-rise flex items-center gap-2.5 rounded-lg border border-transparent bg-background/60 px-3 py-2 transition hover:border-brand/50 hover:bg-background"
+              style={{ animationDelay: `${Math.min(i, 10) * 0.09}s` }}
             >
-              <svg viewBox="0 0 24 24" width="24" height="24" fill={l.color} aria-label={l.name}>
-                <path d={l.path} />
-              </svg>
+              <img src={faviconOf(s.site)} alt="" className="h-4 w-4 shrink-0 rounded-sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-medium text-foreground">
+                  {s.title}
+                </span>
+                <span className="block truncate text-[10px] text-muted-foreground">{s.site}</span>
+              </span>
             </a>
           ))}
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          Kaynaklar taranıyor... simgelere tıklayarak siteyi açabilirsin.
-        </p>
       </div>
     </div>
   );
