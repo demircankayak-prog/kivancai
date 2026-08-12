@@ -2049,7 +2049,9 @@ function Index() {
                     </div>
                   </div>
                 ))}
-                {researchTopic && <ResearchBox topic={researchTopic} />}
+                {researchTopic && (
+                  <ResearchBox topic={researchTopic} sources={researchSources} />
+                )}
                 {generatingImage && (
                   <div className="flex gap-3 justify-start">
                     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
