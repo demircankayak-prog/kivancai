@@ -941,33 +941,73 @@ function Index() {
     }
     const rec = new SR();
     rec.lang = "tr-TR";
-    rec.interimResults = false;
-    rec.continuous = false;
+    // Sürekli dinle: kullanıcı sustuktan 2.5 sn sonra gönder, erken kapanma yok.
+    rec.interimResults = true;
+    rec.continuous = true;
+    let buffer = "";
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearSilence = () => {
+      if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+      }
+    };
+    const flush = () => {
+      clearSilence();
+      const text = buffer.trim();
+      buffer = "";
+      if (!text) return;
+      liveRecognitionPausedRef.current = true;
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+      void askLiveAI(text);
+    };
     rec.onresult = (e) => {
       const transcript = Array.from(e.results)
         .slice(e.resultIndex)
         .map((result) => result[0]?.transcript || "")
         .join(" ")
         .trim();
-      if (transcript) {
-        liveRecognitionPausedRef.current = true;
-        void askLiveAI(transcript);
-      }
+      if (!transcript) return;
+      // AI konuşurken kullanıcı araya girerse sustur
+      if (ttsAudioRef.current && !ttsAudioRef.current.paused) stopTts();
+      buffer = `${buffer} ${transcript}`.trim();
+      clearSilence();
+      silenceTimer = setTimeout(flush, 2500);
     };
-    rec.onerror = () => setVoiceListening(false);
+    rec.onerror = () => {
+      // AbortError / no-speech gibi hatalarda kapatma, sessizce devam et
+      clearSilence();
+    };
     rec.onend = () => {
+      clearSilence();
+      if (buffer.trim() && !liveRecognitionPausedRef.current) {
+        flush();
+        return;
+      }
       if (!voiceLiveOpenRef.current || liveRecognitionPausedRef.current) {
         setVoiceListening(false);
         return;
       }
-      try {
-        rec.start();
-      } catch {
-        setVoiceListening(false);
-      }
+      // Tarayıcı kendiliğinden kapatırsa hemen geri aç
+      setTimeout(() => {
+        if (!voiceLiveOpenRef.current || liveRecognitionPausedRef.current) return;
+        try {
+          rec.start();
+        } catch {
+          /* ignore */
+        }
+      }, 200);
     };
     liveRecognitionRef.current = rec;
-    rec.start();
+    try {
+      rec.start();
+    } catch {
+      /* zaten çalışıyor */
+    }
     setVoiceListening(true);
     return true;
   };
