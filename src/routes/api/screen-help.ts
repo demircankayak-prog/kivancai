@@ -10,41 +10,60 @@ export const Route = createFileRoute("/api/screen-help")({
           if (!image || typeof image !== "string") {
             return Response.json({ error: "image (data url) gerekli" }, { status: 400 });
           }
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return Response.json({ error: "LOVABLE_API_KEY yok" }, { status: 500 });
-          }
           const q =
             (typeof question === "string" && question.trim()) ||
             "Kullanıcı bu ekranda gezinmeye çalışıyor. Ne görüyorsun, hangi butona basmalı? Çok kısa ve net cevap ver.";
 
-          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "Sen ekran paylaşımı yardımcısısın. Kullanıcının ekranını görüyorsun. Eğer kullanıcı bir butonu/alanı sorarsa yaklaşık konumunu bul. SADECE geçerli JSON döndür: {\"reply\":\"1-2 cümle doğal Türkçe cevap\",\"label\":\"kısa etiket\",\"crop\":{\"x\":0.0,\"y\":0.0,\"w\":0.25,\"h\":0.25}}. crop değerleri 0-1 arası normalize ekran oranı olsun ve hedefin etrafında biraz pay bıraksın. Hedef yoksa crop null döndür ve kullanıcıya aşağı/sağa kaydırmasını söyle. Markdown veya kod bloğu yazma.",
-                },
-                {
-                  role: "user",
-                  content: [
-                    { type: "text", text: q },
-                    { type: "image_url", image_url: { url: image } },
-                  ],
-                },
-              ],
-            }),
+          const SYS =
+            "Sen ekran paylaşımı yardımcısısın. Kullanıcının ekranını görüyorsun. Eğer kullanıcı bir butonu/alanı sorarsa yaklaşık konumunu bul. SADECE geçerli JSON döndür: {\"reply\":\"1-2 cümle doğal Türkçe cevap\",\"label\":\"kısa etiket\",\"crop\":{\"x\":0.0,\"y\":0.0,\"w\":0.25,\"h\":0.25}}. crop değerleri 0-1 arası normalize ekran oranı olsun ve hedefin etrafında biraz pay bıraksın. Hedef yoksa crop null döndür ve kullanıcıya aşağı/sağa kaydırmasını söyle. Markdown veya kod bloğu yazma.";
+          const body = (model: string) => ({
+            model,
+            messages: [
+              { role: "system", content: SYS },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: q },
+                  { type: "image_url", image_url: { url: image } },
+                ],
+              },
+            ],
           });
-          if (!resp.ok) {
-            const t = await resp.text();
-            console.error("screen-help error:", resp.status, t);
+
+          const HF_TOKEN = process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY;
+          const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+
+          let resp: Response | null = null;
+          // 1) Hugging Face Qwen2.5-VL (ücretsiz kota)
+          if (HF_TOKEN) {
+            try {
+              const hf = await fetch("https://router.huggingface.co/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${HF_TOKEN}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body("Qwen/Qwen2.5-VL-72B-Instruct")),
+              });
+              if (hf.ok) resp = hf;
+              else console.error("hf vision error:", hf.status, (await hf.text()).slice(0, 200));
+            } catch (e) {
+              console.error("hf vision fetch error:", e);
+            }
+          }
+          // 2) Yedek: yerleşik vision modeli
+          if (!resp && LOVABLE_API_KEY) {
+            resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body("google/gemini-2.5-flash")),
+            });
+          }
+          if (!resp || !resp.ok) {
+            if (resp) console.error("screen-help error:", resp.status, (await resp.text()).slice(0, 200));
             return Response.json({ error: "Görsel analiz başarısız" }, { status: 502 });
           }
           const data = await resp.json();
