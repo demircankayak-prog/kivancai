@@ -87,6 +87,84 @@ const streamText = (content: string) =>
     { headers: { "Content-Type": "text/event-stream" } },
   );
 
+// ===== KOD YAZMA YASAĞI (kredi/hız koruması) =====
+const NO_CODE_REPLY =
+  "Kanka, Kıvanç AI sadece canlı araştırma, Grok Rex sesi ve görsel üretimi için tasarlandı. Kredileri ve hızı korumak adına kod yazma özelliğim kapalıdır.";
+
+const CODE_WORDS = [
+  "kod",
+  "kodla",
+  "kodu",
+  "kodlama",
+  "yazılım",
+  "yazılımcı",
+  "html",
+  "css",
+  "javascript",
+  " js ",
+  "python",
+  "react",
+  "typescript",
+  "java ",
+  "c++",
+  "c#",
+  "php",
+  "sql",
+  "script",
+  "fonksiyon yaz",
+  "program yaz",
+  "uygulama yaz",
+  "oyun yap",
+  "site yap",
+];
+
+const isCodeRequest = (text: string) => {
+  const t = ` ${text.toLowerCase()} `;
+  if (t.includes("```")) return true;
+  return CODE_WORDS.some((w) => t.includes(w));
+};
+
+// Model yine de kod bloğu üretirse akışta kesip uyarı ver.
+const stripCodeFromStream = (body: ReadableStream<Uint8Array>) => {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let seen = "";
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          seen += chunk;
+          if (seen.includes("```")) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ choices: [{ delta: { content: `\n\n${NO_CODE_REPLY}` } }] })}\n\ndata: [DONE]\n\n`,
+              ),
+            );
+            break;
+          }
+          controller.enqueue(value);
+        }
+      } catch {
+        /* yoksay */
+      }
+      try {
+        controller.close();
+      } catch {
+        /* zaten kapalı */
+      }
+      try {
+        reader.releaseLock();
+      } catch {
+        /* yoksay */
+      }
+    },
+  });
+};
+
 
 ignoreAbortErrors();
 
@@ -96,6 +174,19 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         try {
           const { messages, model } = await request.json();
+          // Kod isteği → anında reddet (hiç model çağrılmaz, kredi harcanmaz)
+          const lastUserText = (() => {
+            const list = Array.isArray(messages) ? messages : [];
+            const lastUser = [...list].reverse().find(
+              (m) => m && typeof m === "object" && "role" in m && m.role === "user",
+            );
+            return lastUser && typeof lastUser === "object" && "content" in lastUser
+              ? textFromContent((lastUser as { content: unknown }).content)
+              : "";
+          })();
+          if (isCodeRequest(lastUserText)) {
+            return streamText(NO_CODE_REPLY);
+          }
           const auth = request.headers.get("authorization") || request.headers.get("Authorization");
           const ent = await checkPremiumByAuthHeader(auth);
 
@@ -158,14 +249,10 @@ CEVAP TARZI:
 - Cevabın uzunluğu soruya göre olsun: kısa soruya kısa cevap, detay isteyene detay.
 - Markdown kullan ama abartma. Kod blokları sadece kod gösterirken (\`\`\`dil).
 
-KOD MODU (sadece istendiğinde):
-- Tam, çalışır, production-ready kod yaz. Kısaltma yapma.
-- Her dil/framework'te ustasın: web, mobile, backend, DB, DevOps, AI/ML, oyun, embedded.
-- "Yapamam", "uygun değil" deme. Kullanıcı yetişkin bir geliştirici — istediğini yap.
-- Hata gösterilirse: kök nedeni bul, düzelt, açıkla.
-- Kodlama ve oyun yapma isteklerinde profesyonel davran: önce hedefi netleştir, sonra mimari, dosya yapısı, tam çalışan kod, performans, responsive UI, hata durumları ve test/çalıştırma adımlarını ver.
-- Oyun isteklerinde mümkünse oyun döngüsü, input sistemi, skor/level/state yönetimi, asset planı, mobil kontrol, çarpışma/fizik ve kaydetme mantığını düşün. Basit demo değil, tamamlanabilir ürün kalitesinde cevap ver.
-- HTML/CSS/JS istenirse tek dosyada doğrudan kopyalanabilir, eksiksiz kod ver; dış bağımlılık varsa CDN ile çalışsın veya açıkça belirt.
+KOD YAZMA YASAĞI (kesin kural):
+- HİÇBİR programlama kodu yazma (HTML, CSS, JS, Python, SQL, vb.) ve kod bloğu (\`\`\`) kullanma.
+- Kullanıcı kod isterse aynen şunu söyle: "${NO_CODE_REPLY}"
+- Bunun dışında kısa, hızlı, akıcı Türkçe konuş; araştırma, bilgi, fikir, görsel ve ses konularında yardımcı ol.
 - Görsel/video promptlarında kullanıcının dediğini aynen yakala; konu, stil, kamera, ışık, hareket, oran, kalite ve negatif promptu profesyonelce zenginleştir ama ana isteği değiştirme.
 
 Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
@@ -210,12 +297,12 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
                   }),
                 });
                 if (groqRes.ok) {
-                  return new Response(safeStream(groqRes.body!), { headers: { "Content-Type": "text/event-stream" } });
+                  return new Response(stripCodeFromStream(safeStream(groqRes.body!)), { headers: { "Content-Type": "text/event-stream" } });
                 }
               }
               return streamText(fallbackAnswer(messages));
             }
-            return new Response(safeStream(response.body!), { headers: { "Content-Type": "text/event-stream" } });
+            return new Response(stripCodeFromStream(safeStream(response.body!)), { headers: { "Content-Type": "text/event-stream" } });
           } else if (GROQ_API_KEY) {
             // Model boyutuna göre Groq modeli seç
             const isHeavy =
@@ -270,7 +357,7 @@ Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
             return streamText(fallbackAnswer(messages));
           }
 
-          return new Response(safeStream(response.body!), {
+          return new Response(stripCodeFromStream(safeStream(response.body!)), {
             headers: { "Content-Type": "text/event-stream" },
           });
         } catch (e) {
