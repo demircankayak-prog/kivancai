@@ -80,6 +80,7 @@ type ScreenCropPreview = {
 type Msg = {
   role: "user" | "assistant";
   content: string;
+  imagePending?: boolean;
   attachments?: Attachment[];
   generatedImage?: string; // watermarklı data url
   generatedVideo?: string; // video url
@@ -764,7 +765,8 @@ function Index() {
       ...p,
       {
         role: "assistant",
-        content: "🎨 Görseli hazırlıyorum kanka, birazdan geliyor...",
+        content: "",
+        imagePending: true,
       },
     ]);
     try {
@@ -779,6 +781,12 @@ function Index() {
       const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
         `${english}, ultra detailed, high quality, 8k, sharp focus, cinematic lighting`,
       )}?model=flux&width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`;
+      await new Promise<void>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Görsel yüklenemedi"));
+        image.src = imageUrl;
+      });
       setMessages((p) => {
         const arr = [...p];
         arr[arr.length - 1] = {
@@ -2052,6 +2060,23 @@ function Index() {
                           )}
                         </div>
                       )}
+                      {m.imagePending && (
+                        <div className="image-generation-card" role="status" aria-live="polite">
+                          <div className="image-generation-preview" aria-hidden="true">
+                            <div className="image-pixel-grid">
+                              {Array.from({ length: 96 }, (_, pixel) => (
+                                <span key={pixel} style={{ "--pixel-index": pixel } as React.CSSProperties} />
+                              ))}
+                            </div>
+                            <ImageIcon className="image-generation-icon" size={26} />
+                          </div>
+                          <div className="flex items-center gap-2 px-4 py-3">
+                            <Loader2 className="animate-spin text-brand" size={15} />
+                            <span className="font-medium text-foreground">Görsel oluşturuluyor</span>
+                            <span className="image-generation-dots" aria-hidden="true">•••</span>
+                          </div>
+                        </div>
+                      )}
                       {m.generatedImage && (
                         <div className="mb-2">
                           <img
@@ -2107,9 +2132,11 @@ function Index() {
                           </p>
                         </div>
                       )}
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
-                        <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
-                      </div>
+                      {!m.imagePending && (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground prose-code:text-brand">
+                          <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                        </div>
+                      )}
                       {m.role === "assistant" && m.sources && m.sources.length > 0 && (
                         <SourceChips sources={m.sources} />
                       )}
@@ -2137,16 +2164,6 @@ function Index() {
                 ))}
                 {researchTopic && (
                   <ResearchBox topic={researchTopic} sources={researchSources} />
-                )}
-                {generatingImage && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
-                      <ImageIcon size={16} />
-                    </div>
-                    <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-                      <Loader2 className="inline animate-spin" size={14} /> Görsel oluşturuluyor…
-                    </div>
-                  </div>
                 )}
               </div>
             )}
