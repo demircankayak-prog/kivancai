@@ -89,7 +89,7 @@ const streamText = (content: string) =>
 
 // ===== KOD YAZMA YASAĞI (kredi/hız koruması) =====
 const NO_CODE_REPLY =
-  "Kanka, Kıvanç AI sadece canlı araştırma, Grok Rex sesi ve görsel üretimi için tasarlandı. Kredileri ve hızı korumak adına kod yazma özelliğim kapalıdır.";
+  "Kanka, Kıvanç AI sadece 2026 canlı araştırması, Grok Rex sesi ve görsel üretimi için tasarlandı. Kredileri korumak adına kod yazmıyorum.";
 
 const CODE_WORDS = [
   "kod",
@@ -206,10 +206,9 @@ export const Route = createFileRoute("/api/chat")({
           if (ent.persona && ent.persona.trim()) {
             extraSystem += `\n\nKULLANICI TARZ TERCİHİ (mutlaka uy):\n${ent.persona.trim()}`;
           }
-          const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+          void useOpenRouter;
           const GROQ_API_KEY = process.env.GROQ_API_KEY;
-          const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-          if (!LOVABLE_API_KEY && !GROQ_API_KEY && !(useOpenRouter && OPENROUTER_API_KEY)) {
+          if (!GROQ_API_KEY) {
             return streamText(fallbackAnswer(messages));
           }
 
