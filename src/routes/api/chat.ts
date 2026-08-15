@@ -256,93 +256,26 @@ KOD YAZMA YASAĞI (kesin kural):
 
 Sen sıradan bir bot değilsin. Önce DÜŞÜN, sonra konuş.`;
 
-          // ÇAKALLIK: Tüm modelleri Groq'a yönlendir (ücretsiz, hızlı).
-          // UI'da seçilen model adı/logosu aynı kalır, arka planda Groq çalışır.
-          let response: Response;
-          if (useOpenRouter && OPENROUTER_API_KEY) {
-            // KıvançAI Pro → OpenRouter (kullanıcının kendi anahtarı, sınırsız)
-            const flatMessages = (messages as any[]).map((m) => ({
-              role: m.role,
-              content: typeof m.content === "string" ? m.content : textFromContent(m.content),
-            }));
-            response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json",
-                "X-Title": "KivancAI",
-              },
-              body: JSON.stringify({
-                model: "openai/gpt-4o-mini",
-                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
-                stream: true,
-              }),
-            });
-            if (!response.ok) {
-              const errText = await response.text();
-              console.error("openrouter error:", response.status, errText);
-              if (GROQ_API_KEY) {
-                const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${GROQ_API_KEY}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    model: "llama-3.3-70b-versatile",
-                    messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
-                    stream: true,
-                    temperature: 0.7,
-                  }),
-                });
-                if (groqRes.ok) {
-                  return new Response(stripCodeFromStream(safeStream(groqRes.body!)), { headers: { "Content-Type": "text/event-stream" } });
-                }
-              }
-              return streamText(fallbackAnswer(messages));
-            }
-            return new Response(stripCodeFromStream(safeStream(response.body!)), { headers: { "Content-Type": "text/event-stream" } });
-          } else if (GROQ_API_KEY) {
-            // Model boyutuna göre Groq modeli seç
-            const isHeavy =
-              resolvedModel === "kivancai_pro" ||
-              resolvedModel.includes("gpt-5") ||
-              resolvedModel.includes("pro") ||
-              resolvedModel.includes("gemini-2.5-pro") ||
-              resolvedModel.includes("gemini-3.1-pro");
-            const groqModel = isHeavy ? "llama-3.3-70b-versatile" : "llama-3.1-8b-instant";
-            // Groq sadece string content destekler — multimodal parçaları metne indir
-            const flatMessages = (messages as any[]).map((m) => ({
-              role: m.role,
-              content: typeof m.content === "string" ? m.content : textFromContent(m.content),
-            }));
-            response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${GROQ_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: groqModel,
-                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
-                stream: true,
-                temperature: 0.7,
-              }),
-            });
-          } else {
-            response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: resolvedModel,
-                messages: [{ role: "system", content: SYSTEM + extraSystem }, ...messages],
-                stream: true,
-              }),
-            });
-          }
+          // Tüm istekler Groq llama-3.3-70b-versatile üzerinden (ücretsiz, günlük yenilenen dev kota).
+          // UI'da seçilen model adı/logosu aynı kalır.
+          void resolvedModel;
+          const flatMessages = (messages as any[]).map((m) => ({
+            role: m.role,
+            content: typeof m.content === "string" ? m.content : textFromContent(m.content),
+          }));
+          const response: Response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [{ role: "system", content: SYSTEM + extraSystem }, ...flatMessages],
+              stream: true,
+              temperature: 0.7,
+            }),
+          });
 
           if (!response.ok) {
             if (response.status === 429) {
