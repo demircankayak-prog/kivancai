@@ -332,6 +332,59 @@ const isResearchQuestion = (text: string) => {
 const faviconOf = (site: string) =>
   `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(site)}`;
 
+const youtubeIdOf = (url: string): string | null => {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1, 12) || null;
+    if (!u.hostname.includes("youtube.com")) return null;
+    const v = u.searchParams.get("v");
+    if (v) return v;
+    const m = /\/(embed|shorts)\/([\w-]{11})/.exec(u.pathname);
+    return m ? m[2] : null;
+  } catch {
+    return null;
+  }
+};
+
+function YouTubePlayers({ sources }: { sources: SearchSource[] }) {
+  const vids = sources
+    .map((s) => ({ s, id: youtubeIdOf(s.url) }))
+    .filter((v): v is { s: SearchSource; id: string } => Boolean(v.id))
+    .slice(0, 2);
+  if (!vids.length) return null;
+  return (
+    <div className="mt-3 space-y-3">
+      {vids.map(({ s, id }, i) => (
+        <div
+          key={id + i}
+          className="kv-rise overflow-hidden rounded-2xl border border-border bg-background/70"
+          style={{ animationDelay: `${i * 0.12}s` }}
+        >
+          <div className="aspect-video w-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${id}`}
+              title={s.title || "YouTube video"}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+          <a
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block truncate px-3 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            ▶ {s.title || "YouTube'da aç"}
+          </a>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SourceChips({ sources }: { sources: SearchSource[] }) {
   if (!sources.length) return null;
   return (
