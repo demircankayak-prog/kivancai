@@ -1816,6 +1816,11 @@ function Index() {
   const newChat = () => {
     setMessages([]);
     setInput("");
+    try {
+      localStorage.removeItem("kivanc-active-chat");
+    } catch {
+      /* yoksay */
+    }
   };
 
   const saveCurrentChat = () => {
