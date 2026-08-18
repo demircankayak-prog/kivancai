@@ -2054,11 +2054,11 @@ function Index() {
 
             <div className="flex items-center gap-3">
               <a
-                href="/KivancAI.exe"
+                href="/KivancAI.exe?v=2"
                 download
                 className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition hover:bg-accent"
                 aria-label="Masaüstü uygulamasını indir"
-                title="KivancAI.exe indir — tek tıkla açılır"
+                title="KivancAI.exe v2 indir — tek tıkla açılır"
               >
                 <Download size={16} />
               </a>
