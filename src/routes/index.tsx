@@ -1576,6 +1576,30 @@ function Index() {
       }
   }, []);
 
+  // Aktif sohbeti sayfa yenilense bile koru
+  const chatRestoredRef = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("kivanc-active-chat");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Msg[];
+        if (Array.isArray(parsed) && parsed.length) setMessages(parsed);
+      }
+    } catch {
+      /* yoksay */
+    }
+    chatRestoredRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!chatRestoredRef.current) return;
+    try {
+      localStorage.setItem("kivanc-active-chat", JSON.stringify(messages.slice(-60)));
+    } catch {
+      /* kota dolduysa yoksay */
+    }
+  }, [messages]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
