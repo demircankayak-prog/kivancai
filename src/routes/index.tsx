@@ -2191,7 +2191,10 @@ function Index() {
                         </div>
                       )}
                       {m.role === "assistant" && m.sources && m.sources.length > 0 && (
-                        <SourceChips sources={m.sources} />
+                        <>
+                          <SourceChips sources={m.sources} />
+                          <YouTubePlayers sources={m.sources} />
+                        </>
                       )}
                       {m.role === "assistant" && !!m.content?.trim() && (
                         <button
