@@ -956,7 +956,53 @@ function Index() {
     liveRecognitionPausedRef.current = false;
   };
 
-  // Anında (buffersiz) Grok Rex / Charlie erkek sesi.
+  // ===== Kalın / tok "Jarvis" erkek sesi (window.speechSynthesis, sonsuz & ücretsiz) =====
+  const pickMaleTurkishVoice = () => {
+    try {
+      const voices = window.speechSynthesis?.getVoices?.() || [];
+      if (!voices.length) return null;
+      const byName = (needle: string) =>
+        voices.find((v) => v.name.toLowerCase().includes(needle));
+      return (
+        byName("tolga") ||
+        byName("google türkçe") ||
+        byName("google turkce") ||
+        voices.find((v) => v.lang?.toLowerCase().startsWith("tr") && /male|erkek/i.test(v.name)) ||
+        voices.find((v) => v.lang?.toLowerCase().startsWith("tr")) ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  };
+
+  const speakJarvis = (text: string, onDone?: () => void) => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!synth) return false;
+    try {
+      synth.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.slice(0, 1200));
+      utterance.lang = "tr-TR";
+      utterance.pitch = 0.1; // sesi çok kalın ve tok yapar
+      utterance.rate = 0.95; // biraz ağır ve karizmatik
+      utterance.volume = 1;
+      const voice = pickMaleTurkishVoice();
+      if (voice) utterance.voice = voice;
+      setVoiceSpeaking(true);
+      const finish = () => {
+        setVoiceSpeaking(false);
+        onDone?.();
+      };
+      utterance.onend = finish;
+      utterance.onerror = finish;
+      synth.speak(utterance);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Anında (buffersiz) kalın erkek sesi — önce tarayıcı Jarvis sesi, olmazsa Charlie.
   const playInstantVoice = (text: string, onDone?: () => void) => {
     const clean = text
       .replace(/[*_`#>~]+/g, "")
@@ -967,6 +1013,7 @@ function Index() {
       return;
     }
     stopTts();
+    if (speakJarvis(clean, onDone)) return;
     const audio = new Audio(pollinationsTtsUrl(clean));
     audio.preload = "auto";
     ttsAudioRef.current = audio;
@@ -977,7 +1024,6 @@ function Index() {
     };
     audio.onended = finish;
     audio.onerror = () => {
-      // yedek: kendi ses servisimiz
       void speakReply(clean).finally(finish);
     };
     audio.play().catch((err) => {
@@ -986,7 +1032,18 @@ function Index() {
     });
   };
 
-  // Tarayıcının robotik SpeechSynthesis motoru tamamen devre dışı.
+  // Aynı listener'ın üst üste birikmesini engelle (tekrar yazma bug'ı fixi)
+  const detachRecognition = (rec: BrowserSpeechRecognition | null) => {
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onend = null;
+    rec.onerror = null;
+    try {
+      rec.stop();
+    } catch {
+      /* ignore */
+    }
+  };
 
   const startBrowserLiveRecognition = () => {
     const speechWindow = window as Window & {
@@ -995,17 +1052,16 @@ function Index() {
     };
     const SR = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SR) return false;
-    try {
-      liveRecognitionRef.current?.stop();
-    } catch {
-      /* ignore */
-    }
+    // Önce eski örneği tamamen temizle
+    detachRecognition(liveRecognitionRef.current);
+    liveRecognitionRef.current = null;
     const rec = new SR();
     rec.lang = "tr-TR";
     // Sürekli dinle: kullanıcı sustuktan 2.5 sn sonra gönder, erken kapanma yok.
-    rec.interimResults = true;
+    rec.interimResults = false; // sadece kesinleşmiş (isFinal) sonuçlar
     rec.continuous = true;
     let buffer = "";
+    let lastFinal = "";
     let silenceTimer: ReturnType<typeof setTimeout> | null = null;
     const clearSilence = () => {
       if (silenceTimer) {
@@ -1017,27 +1073,41 @@ function Index() {
       clearSilence();
       const text = buffer.trim();
       buffer = "";
+      lastFinal = "";
       if (!text) return;
       liveRecognitionPausedRef.current = true;
-      try {
-        rec.stop();
-      } catch {
-        /* ignore */
-      }
+      detachRecognition(rec);
       void askLiveAI(text);
     };
     rec.onresult = (e) => {
-      const transcript = Array.from(e.results)
-        .slice(e.resultIndex)
-        .map((result) => result[0]?.transcript || "")
-        .join(" ")
-        .trim();
-      if (!transcript) return;
+      // Sadece isFinal === true olan sonuçları al → aynı cümle 10 kez yazılmaz
+      let finalText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (!result?.isFinal) continue;
+        finalText += ` ${result[0]?.transcript || ""}`;
+      }
+      finalText = finalText.replace(/\s+/g, " ").trim();
+      if (!finalText) return;
+      // Aynı final metnin tekrarını yoksay (debounce)
+      if (finalText.toLowerCase() === lastFinal.toLowerCase()) return;
+      lastFinal = finalText;
       // AI konuşurken kullanıcı araya girerse sustur
       if (ttsAudioRef.current && !ttsAudioRef.current.paused) stopTts();
-      buffer = `${buffer} ${transcript}`.trim();
+      try {
+        if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
+      } catch {
+        /* ignore */
+      }
+      // "Kıvanç AI" uyanma kelimesi → küre belirir, asistan hemen tetiklenir
+      const isWake = WAKE_WORD_RE.test(finalText);
+      if (isWake) {
+        setVoiceAwake(true);
+        setVoiceListening(true);
+      }
+      buffer = `${buffer} ${finalText}`.trim();
       clearSilence();
-      silenceTimer = setTimeout(flush, 2500);
+      silenceTimer = setTimeout(flush, isWake ? 1200 : 2500);
     };
     rec.onerror = () => {
       // AbortError / no-speech gibi hatalarda kapatma, sessizce devam et
@@ -1056,6 +1126,7 @@ function Index() {
       // Tarayıcı kendiliğinden kapatırsa hemen geri aç
       setTimeout(() => {
         if (!voiceLiveOpenRef.current || liveRecognitionPausedRef.current) return;
+        if (liveRecognitionRef.current !== rec) return; // eski örnek → yeniden başlatma
         try {
           rec.start();
         } catch {
@@ -1063,6 +1134,7 @@ function Index() {
         }
       }, 200);
     };
+
     liveRecognitionRef.current = rec;
     try {
       rec.start();
