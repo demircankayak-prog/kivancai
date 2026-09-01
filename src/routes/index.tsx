@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import VideoStudio from "@/components/VideoStudio";
 import {
   FileText,
   Lightbulb,
@@ -546,6 +547,7 @@ function Index() {
   const [researchSources, setResearchSources] = useState<SearchSource[]>([]);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
+  const [videoStudioOpen, setVideoStudioOpen] = useState(false);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceAwake, setVoiceAwake] = useState(false);
@@ -2127,6 +2129,13 @@ function Index() {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setVideoStudioOpen(true)}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                title="Video üret"
+              >
+                <Film size={15} /> Video Üret
+              </button>
               <a
                 href="/KivancAI.exe?v=2"
                 download
@@ -3228,6 +3237,8 @@ function Index() {
           )}
         </div>
       )}
+
+      {videoStudioOpen && <VideoStudio onClose={() => setVideoStudioOpen(false)} />}
     </main>
   );
 }
