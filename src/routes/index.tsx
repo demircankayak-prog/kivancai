@@ -3237,6 +3237,8 @@ function Index() {
           )}
         </div>
       )}
+
+      {videoStudioOpen && <VideoStudio onClose={() => setVideoStudioOpen(false)} />}
     </main>
   );
 }
