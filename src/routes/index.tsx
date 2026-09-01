@@ -122,6 +122,7 @@ interface ModelOption {
 }
 
 const PRO_FREE_UNTIL = new Date("2026-09-10T00:00:00Z").getTime();
+const WAKE_WORD_RE = /\b(kıvanç|kivanc|kivanç|kıvanc)\s*(ai|yapay\s*zeka)?\b/i;
 
 const MODELS: ModelOption[] = [
   {
