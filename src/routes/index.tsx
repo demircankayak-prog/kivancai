@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import VideoStudio from "@/components/VideoStudio";
 import {
   FileText,
   Lightbulb,
@@ -546,6 +547,7 @@ function Index() {
   const [researchSources, setResearchSources] = useState<SearchSource[]>([]);
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
+  const [videoStudioOpen, setVideoStudioOpen] = useState(false);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceAwake, setVoiceAwake] = useState(false);
