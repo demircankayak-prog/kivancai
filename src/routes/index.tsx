@@ -547,6 +547,7 @@ function Index() {
   const [videoCount, setVideoCount] = useState(0);
   const [voiceLiveOpen, setVoiceLiveOpen] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceAwake, setVoiceAwake] = useState(false);
   const voiceLiveOpenRef = useRef(false);
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
